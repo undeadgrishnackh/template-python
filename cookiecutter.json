@@ -1,3 +1,4 @@
 {
-  "kata_name": "DummyKata"
+  "kata_name": "DummyKata",
+  "directory_name": "{{ cookiecutter.kata_name.lower().replace(' ', '_') }}"
 }
