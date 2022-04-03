@@ -1,0 +1,6 @@
+[run]
+omit =
+    # omit tests from the coverage
+    tests/*
+    # omit the semantic-release setup
+    __version__.py
