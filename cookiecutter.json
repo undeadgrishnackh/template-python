@@ -1,5 +1,7 @@
 {
   "kata_name": "DummyKata",
   "directory_name": "{% now 'local', '%Y%m%d' %}_{{ cookiecutter.kata_name.lower().replace(' ', '_') }}",
-  "matrix.python-version": "${{ matrix.python-version }}"
+  "_copy_without_render": [
+    ".github/workflows/cicd.yml"
+  ]
 }
