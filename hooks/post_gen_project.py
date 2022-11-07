@@ -16,3 +16,4 @@ if __name__ == '__main__':
     run_command('git init')
     run_command('pipenv run install_pre_hooks')
     run_command('pipenv run tests')
+    run_command('code .')
