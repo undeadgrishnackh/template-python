@@ -17,36 +17,36 @@ def run_command(command):
 if __name__ == '__main__':
     print('👷🏻 Creating virtual environment...')
     run_command('pipenv install --dev')
-        
+
     print('🧪 running dry test cycle...')
     run_command('pipenv run tests')
-    
+
     print('😻 git repo creation...')
     run_command(f'gh repo create {kata_name} --private')
-    
+
     print('😻 Git initializing...')
     run_command('git init')
-    
+
     print('🐍 Creating local quality gate with git hooks...')
     run_command('pipenv run install_pre_hooks')
 
-    
+
     print('😻 Git add remote...')
     run_command(f'git remote add origin git@github.com:undeadgrishnackh/{kata_name}.git')
-    
+
     print('😻 Git branch main...')
     run_command("git branch -M main")
-    
+
     print('😻 git add all the items in the repo...')
     run_command('git add --all')
-    
+
     print('😻 git commit the jumpstart...')
     run_command(f'git commit -m "feat: jumpstart {kata_name} with cookiecutter"')
-    
+
     print('😻 git push the jumpstart...')
-    run_command(f'git push -u origin main')
-    
+    run_command('git push -u origin main')
+
     print('👩🏻‍💻 time to code!')
     run_command('code .')
-    
+
     print('👋🏿 bye bye! 🐍')
