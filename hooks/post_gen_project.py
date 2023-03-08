@@ -6,7 +6,7 @@ import subprocess
 
 PROJECT_DIRECTORY = os.path.realpath(os.path.curdir)
 
-kata_name = '{{ cookiecutter.kata_name}}'
+kata_name = '{{ cookiecutter.directory_name }}'
 
 def run_command(command):
     completed_process = subprocess.run(command, cwd=PROJECT_DIRECTORY, shell=True, check=True, timeout=360)
@@ -29,7 +29,6 @@ if __name__ == '__main__':
     
     print('🐍 Creating local quality gate with git hooks...')
     run_command('pipenv run install_pre_hooks')
-
     
     print('😻 Git add remote...')
     run_command(f'git remote add origin git@github.com:undeadgrishnackh/{kata_name}.git')
@@ -44,9 +43,9 @@ if __name__ == '__main__':
     run_command(f'git commit -m "feat: jumpstart {kata_name} with cookiecutter"')
     
     print('😻 git push the jumpstart...')
-    run_command(f'git push -u origin main')
+    run_command('git push -u origin main')
     
     print('👩🏻‍💻 time to code!')
-    run_command('code .')
+    run_command('pycharm .')
     
     print('👋🏿 bye bye! 🐍')
