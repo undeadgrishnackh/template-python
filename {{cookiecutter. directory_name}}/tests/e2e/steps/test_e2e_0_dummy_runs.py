@@ -5,7 +5,7 @@ from pytest_bdd import given, when, then, scenarios
 from modules import dummy
 
 
-scenarios('../features/0_dummy_runs.feature')
+scenarios("../features/0_dummy_runs.feature")
 
 
 @given("a user")
@@ -23,4 +23,4 @@ def installer(capsys):
 @then("a dummy title should be printed")
 def then_the_title_is_printed(installer):
     return_code, out, err = installer
-    assert '😊 Welcome to Dummy Kata' in out
+    assert "😊 Welcome to Dummy Kata" in out

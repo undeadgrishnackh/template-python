@@ -8,4 +8,4 @@ def describe_dummy_kata():
         """🧪 expect the dummy kata prints the title"""
         dummy.print_the_title()
         out, _err = capsys.readouterr()
-        assert '😊 Welcome to Dummy Kata' in out
+        assert "😊 Welcome to Dummy Kata" in out
