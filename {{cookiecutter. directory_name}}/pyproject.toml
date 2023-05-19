@@ -17,3 +17,6 @@ style = [
     ["text", ""],
     ["disabled", "fg:#858585 italic"]
 ]
+
+[tool.black]
+    line-length = 120
