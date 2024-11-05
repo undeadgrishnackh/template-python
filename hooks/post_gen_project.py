@@ -22,6 +22,9 @@ def run_command(command):
 if __name__ == "__main__":
     print("👷🏻 Creating virtual environment...")
     run_command("pipenv install --dev")
+    
+    print("👨🏻‍🔧 Forcing virtual environment with the new typing-extensions packaging...")
+    run_command("pipenv run forceTypingExrtensions")
 
     print("🧪 running dry test cycle...")
     run_command("pipenv run tests")
