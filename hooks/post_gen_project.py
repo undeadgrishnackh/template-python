@@ -53,6 +53,6 @@ if __name__ == "__main__":
     run_command("git push -u origin main")
 
     print("👩🏻‍💻 time to code!")
-    run_command("pycharm .")
+    run_command("code .")
 
     print("👋🏿 bye bye! 🐍")
