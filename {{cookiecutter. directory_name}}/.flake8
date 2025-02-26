@@ -1,0 +1,23 @@
+[flake8]
+# extend-ignore = E203
+exclude =
+    .git,
+    __pycache__,
+    docs/source/conf.py,
+    old,
+    build,
+    dist
+max-complexity = 10
+
+# [flake8:local-plugins]
+# extension =
+#     MC1 = project.flake8.checkers:MyChecker1
+#     MC2 = project.flake8.checkers:MyChecker2
+# report =
+#     MR1 = project.flake8.reporters:MyReporter1
+#     MR2 = project.flake8.reporters:MyReporter2
+# --- OR ---
+# extension =
+#   MC1 = myflake8plugin:MyChecker1
+# paths =
+#   ./path/to

@@ -1,16 +1,47 @@
 repos:
-  - repo: https://github.com/psf/black
-    rev: 23.1.0
+  - repo: https://github.com/pylint-dev/pylint
+    rev: v2.17.5
     hooks:
-      - id: black
-  - repo: https://github.com/pycqa/pylint
-    rev: v2.16.3
-    hooks:
-    -   id: pylint
+      - id: pylint
+        language: system
+        entry: pipenv run pylint
         args:
           - --ignore-paths=^tests/.*$
+
+  - repo: https://github.com/psf/black
+    rev: 23.11.0
+    hooks:
+      - id: black
+
+  - repo: https://github.com/pycqa/flake8
+    rev: 6.1.0
+    hooks:
+      - id: flake8
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.7.1
+    hooks:
+      - id: mypy
+        args: ["--strict"]
+
   - repo: https://github.com/commitizen-tools/commitizen
     rev: v2.42.1
+    hooks:
+      - id: commitizen
+        stages: [ commit-msg ]
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        stages: [pre-commit]
+      - id: end-of-file-fixer
+        stages: [pre-commit]
+      - id: check-yaml
+        stages: [pre-commit]
+
+  - repo: https://github.com/commitizen-tools/commitizen
+    rev: v4.2.2
     hooks:
       - id: commitizen
         stages: [ commit-msg ]
