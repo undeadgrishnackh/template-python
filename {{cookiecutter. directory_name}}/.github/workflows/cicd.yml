@@ -22,9 +22,14 @@ jobs:
         pip install pipenv
         pipenv install --deploy --dev
 
-    - name: 🕵️‍ PyLint
+    - name: 🔍 Ruff Lint & Format Check
       run: |
-        pipenv run linterCheck
+        pipenv run lint
+        pipenv run ruff format --check modules tests
+
+    - name: 🔒 Security Scan (Bandit)
+      run: |
+        pipenv run bandit -c pyproject.toml -r modules/
 
     - name: 🤖 Tests - 🧪 Unit - 🔌 Integration - 👩🏻‍💻 E2E
       run: |
@@ -39,4 +44,3 @@ jobs:
           reports/
           junit/
           coverage.xml
-    

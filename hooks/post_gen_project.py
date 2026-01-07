@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-from cProfile import run
 import os
 import subprocess
 
@@ -22,8 +21,10 @@ def run_command(command):
 if __name__ == "__main__":
     print("👷🏻 Creating virtual environment...")
     run_command("pipenv install --dev")
-    
-    print("👨🏻‍🔧 Forcing virtual environment with the new typing-extensions packaging...")
+
+    print(
+        "👨🏻‍🔧 Forcing virtual environment with the new typing-extensions packaging..."
+    )
     run_command("pipenv run forceTypingExrtensions")
 
     print("🧪 running dry test cycle...")

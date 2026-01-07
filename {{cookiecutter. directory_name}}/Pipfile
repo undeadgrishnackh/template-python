@@ -4,22 +4,27 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
+# Testing
 pytest = "*"
 pytest-bdd = "*"
 pytest-describe-it = "*"
 pytest-html = "*"
 pytest-cov = "*"
 pytest-pspec = "*"
-pytest-mock = "~=3.6.1"
+pytest-mock = "*"
 pytest-describe = "*"
 pytest-watch = "*"
+# Code Quality (Ruff replaces: Black + Flake8 + isort + Pylint)
+ruff = "*"
+mypy = "*"
+# Security
+bandit = {extras = ["toml"], version = "*"}
+detect-secrets = "*"
+# Git & Release
 python-semantic-release = "*"
 commitizen = "*"
-flake8 = "*"
-black = "*"
-pylint = "*"
-mypy = "*"
 pre-commit = "*"
+# Reporting
 weasyprint = "*"
 
 [packages]
@@ -56,5 +61,9 @@ watchUnit = "ptw tests/unit -- --tb=short"
 watchIntegration = "ptw tests/integration -- --tb=short"
 watchE2E = "ptw tests/e2e -- --tb=short"
 install_pre_hooks = "pre-commit install"
-linterCheck = "pylint -f msvs modules"
+lint = "ruff check modules tests"
+format = "ruff format modules tests"
+lintFix = "ruff check --fix modules tests"
+security = "bandit -c pyproject.toml -r modules/"
+secretsScan = "detect-secrets scan --baseline .secrets.baseline"  # pragma: allowlist secret
 forceTypingExtensions = "python -m pip install typing-extensions"

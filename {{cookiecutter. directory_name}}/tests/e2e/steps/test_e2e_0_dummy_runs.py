@@ -1,6 +1,4 @@
-import sys
-
-from pytest_bdd import given, when, then, scenarios
+from pytest_bdd import given, scenarios, then, when
 
 from modules import dummy
 
@@ -22,5 +20,5 @@ def installer(capsys):
 
 @then("a dummy title should be printed")
 def then_the_title_is_printed(installer):
-    return_code, out, err = installer
+    _return_code, out, _err = installer
     assert "😊 Welcome to Dummy Kata" in out

@@ -18,5 +18,77 @@ style = [
     ["disabled", "fg:#858585 italic"]
 ]
 
-[tool.black]
-    line-length = 120
+# Ruff replaces: Black (formatter) + Flake8 (linter) + isort (import sorting) + pylint (partial)
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+exclude = [
+    ".git",
+    "__pycache__",
+    "docs/source/conf.py",
+    "old",
+    "build",
+    "dist",
+    ".venv",
+    "venv",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # pyflakes
+    "I",      # isort - import sorting
+    "C90",    # mccabe complexity
+    "N",      # pep8-naming
+    "UP",     # pyupgrade
+    "B",      # flake8-bugbear
+    "S",      # flake8-bandit (security)
+    "A",      # flake8-builtins
+    "C4",     # flake8-comprehensions
+    "DTZ",    # flake8-datetimez
+    "T10",    # flake8-debugger
+    "ISC",    # flake8-implicit-str-concat
+    "PIE",    # flake8-pie
+    "PT",     # flake8-pytest-style
+    "RET",    # flake8-return
+    "SIM",    # flake8-simplify
+    "ARG",    # flake8-unused-arguments
+    "PL",     # pylint
+    "RUF",    # ruff-specific
+    # === TYPE ENFORCEMENT ===
+    "ANN",    # flake8-annotations - ENFORCES type hints on functions
+    "TCH",    # flake8-type-checking - proper typing imports
+    "FA",     # flake8-future-annotations - modern annotation style
+]
+ignore = [
+    "S101",    # assert used - fine in tests
+    "PLR2004", # magic value comparison - too noisy
+    "ANN401",  # dynamically typed expressions (Any) - sometimes needed
+]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101", "ARG", "PLR2004", "ANN"]  # Relax type hints in tests
+
+[tool.ruff.lint.isort]
+known-first-party = ["modules"]
+force-single-line = false
+lines-after-imports = 2
+section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
+
+[tool.ruff.lint.flake8-annotations]
+allow-star-arg-any = false
+suppress-none-returning = true
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+docstring-code-format = true
+
+# Bandit security scanner
+[tool.bandit]
+exclude_dirs = ["tests", "venv", ".venv"]
+skips = ["B101"]  # Skip assert_used - fine in production code with proper error handling
