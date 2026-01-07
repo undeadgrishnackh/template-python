@@ -25,7 +25,7 @@ if __name__ == "__main__":
     print(
         "👨🏻‍🔧 Forcing virtual environment with the new typing-extensions packaging..."
     )
-    run_command("pipenv run forceTypingExrtensions")
+    run_command("pipenv run forceTypingExtensions")
 
     print("🧪 running dry test cycle...")
     run_command("pipenv run tests")
