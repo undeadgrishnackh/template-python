@@ -6,7 +6,7 @@ repos:
     hooks:
       - id: ruff-format
         name: ruff-format (Black replacement)
-        entry: ruff format
+        entry: pipenv run ruff format
         language: system
         types: [python]
 
@@ -17,7 +17,7 @@ repos:
     hooks:
       - id: ruff-lint
         name: ruff-lint (Flake8 + Pylint + isort replacement)
-        entry: ruff check --fix
+        entry: pipenv run ruff check --fix
         language: system
         types: [python]
 
@@ -28,7 +28,7 @@ repos:
     hooks:
       - id: mypy
         name: mypy (type checking)
-        entry: mypy
+        entry: pipenv run mypy
         language: system
         types: [python]
         files: ^modules/
@@ -41,7 +41,7 @@ repos:
     hooks:
       - id: bandit
         name: bandit (security scanner)
-        entry: bandit -r modules/ -x tests
+        entry: pipenv run bandit -r modules/ -x tests
         language: system
         types: [python]
         pass_filenames: false
