@@ -52,6 +52,7 @@ coverage.xml
 cover/
 coverage-reports/
 junit/
+reports/
 test-output.xml
 test-results.xml
 

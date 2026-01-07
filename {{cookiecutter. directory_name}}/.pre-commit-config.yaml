@@ -1,12 +1,13 @@
 repos:
   - repo: https://github.com/pylint-dev/pylint
-    rev: v2.17.5
+    rev: v2.17.5  # Use the latest stable release of pylint
     hooks:
       - id: pylint
         language: system
         entry: pipenv run pylint
         args:
           - --ignore-paths=^tests/.*$
+
 
   - repo: https://github.com/psf/black
     rev: 23.11.0
