@@ -71,6 +71,38 @@ def setup_environment():
     run_command("pipenv run install_pre_hooks")
 
 
+def initialize_git_repository(kata_name: str) -> None:
+    """Initialize a new git repository with GitHub remote.
+
+    Performs repository creation and configuration for STANDALONE mode only.
+    In integration mode, this function is NOT called.
+
+    Operations (standalone mode):
+    - Create private GitHub repository
+    - Initialize local git repository
+    - Add remote origin
+    - Set main branch
+
+    Args:
+        kata_name: Name for the repository
+    """
+    print("Initializing new git repository...")
+
+    print("  Creating GitHub repository...")
+    run_command(f"gh repo create {kata_name} --private")
+
+    print("  Initializing local repository...")
+    run_command("git init")
+
+    print("  Adding remote origin...")
+    run_command(
+        f"git remote add origin git@github.com:undeadgrishnackh/{kata_name}.git"
+    )
+
+    print("  Setting main branch...")
+    run_command("git branch -M main")
+
+
 if __name__ == "__main__":
     print("👷🏻 Creating virtual environment...")
     run_command("pipenv install --dev")
