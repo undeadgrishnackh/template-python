@@ -64,6 +64,23 @@ Feature: Smart Git Repository Detection
     And the hook correctly determines no repository exists
     And the hook proceeds with full git initialization
 
+  @edge-case @symlinks
+  Scenario: Detection works correctly with symlinked directories
+    Given a developer is working in a symlinked project directory
+    And the symlink target has a git repository
+    When the developer generates a Python scaffold
+    Then the hook resolves the symlink and detects the git repository
+    And the hook skips repository creation operations
+
+  @edge-case @branch-preservation
+  Scenario: Existing repository branch is preserved during scaffold
+    Given Alex is working on a feature branch named "feature/trading-api"
+    And the project has an existing git repository
+    When Alex generates a Python scaffold with directory name "source"
+    Then the hook does not change the current branch
+    And the validation commit is created on "feature/trading-api"
+    And the branch remains "feature/trading-api" after scaffold completion
+
   # Error Scenarios
 
   @error-path @permission-denied

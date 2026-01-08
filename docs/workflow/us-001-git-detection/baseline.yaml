@@ -1,0 +1,292 @@
+# Baseline: US-001 Smart Git Repository Detection
+# Type: feature_development
+# Generated: 2026-01-08
+# Agent: researcher (Nova)
+
+project_id: us-001-git-detection
+baseline_type: feature_development
+status: established
+
+# =============================================================================
+# CURRENT STATE ANALYSIS
+# =============================================================================
+current_state:
+  description: |
+    The current post_gen_project.py (62 lines) is a linear script that unconditionally
+    executes the full git repository creation workflow. There is NO git detection
+    capability. Every invocation attempts: gh repo create, git init, git remote add,
+    git push, and opens VS Code.
+
+    This design assumes standalone kata creation in clean directories and fails
+    catastrophically when run inside existing git repositories.
+
+  file_analyzed: hooks/post_gen_project.py
+  lines_of_code: 62
+
+  existing_capabilities:
+    - "Virtual environment creation (pipenv install --dev)"
+    - "Typing extensions fix (pipenv run forceTypingExtensions)"
+    - "Test execution (pipenv run tests)"
+    - "GitHub repository creation (gh repo create)"
+    - "Git initialization (git init)"
+    - "Pre-commit hooks installation (pipenv run install_pre_hooks)"
+    - "Remote configuration (git remote add origin)"
+    - "Initial commit and push (git add, commit, push)"
+    - "VS Code launch (code .)"
+
+  current_limitations:
+    - limitation: "No git repository detection"
+      impact: "Script fails when run inside existing git repos"
+      severity: critical
+
+    - limitation: "Unconditional gh repo create"
+      impact: "Fails with 'Repository already exists' in monorepos"
+      severity: critical
+
+    - limitation: "Hardcoded VS Code launch"
+      impact: "Breaks headless automation (5D-Wave agents, CI/CD)"
+      severity: high
+
+    - limitation: "No conditional git operations"
+      impact: "Cannot integrate into existing project structures"
+      severity: high
+
+    - limitation: "Linear execution model"
+      impact: "No branching logic for different scenarios"
+      severity: medium
+
+  why_insufficient: |
+    The current implementation serves only standalone kata creation. When Alex
+    (5D-Wave agent) runs the template inside /my-trading-bot/ where .git already
+    exists, the hook fails at line 34 (gh repo create) with a fatal error.
+
+    This blocks automated DESIGN wave workflows entirely, requiring manual
+    intervention to work around the failure.
+
+# =============================================================================
+# REQUIREMENTS SOURCE
+# =============================================================================
+requirements_source:
+  origin: docs/requirements/user-stories.md
+  document_id: US-COOKIECUTTER-GIT-2026-001
+  version: "1.0"
+  status: DoR VALIDATED
+  date: 2026-01-08
+  author: Riley (Product Owner)
+
+  validation_method: |
+    Product owner authored user story with:
+    - Concrete personas (Alex the 5D-Wave agent, Maria the platform engineer, Sam the developer)
+    - Domain-specific examples (3 scenarios)
+    - BDD acceptance criteria (Gherkin format)
+    - Clear acceptance criteria checklist (7 items)
+
+  architecture_validation:
+    document: docs/architecture/architecture.md
+    document_id: ARCH-COOKIECUTTER-2026-001
+    architect: Morgan (Solution Architect)
+    status: DRAFT
+
+  adr_validation:
+    document: docs/architecture/adrs/ADR-001-git-detection-algorithm.md
+    status: Accepted
+    decision: "Parent directory traversal using pathlib.Path"
+
+# =============================================================================
+# SPECIFIC REQUIREMENTS FROM US-001
+# =============================================================================
+requirements:
+  acceptance_criteria:
+    - id: AC-001
+      description: "is_inside_git_repo() function traverses parent directories correctly"
+      type: functional
+      priority: P1
+
+    - id: AC-002
+      description: "Detection works for .git directory at any parent level"
+      type: functional
+      priority: P1
+
+    - id: AC-003
+      description: "Detection works for .git file (bare repos, worktrees)"
+      type: functional
+      priority: P2
+
+    - id: AC-004
+      description: "Repository creation skipped when inside existing repo"
+      type: functional
+      priority: P1
+
+    - id: AC-005
+      description: "Environment setup (pipenv, pre-commit) always executes"
+      type: functional
+      priority: P1
+
+    - id: AC-006
+      description: "Validation commit always executes when inside existing repo"
+      type: functional
+      priority: P1
+
+    - id: AC-007
+      description: "Clean directory triggers full git initialization (backwards compatible)"
+      type: functional
+      priority: P1
+
+  bdd_scenarios:
+    - name: "Agent detects existing repository and skips repo creation"
+      persona: Alex (5D-Wave agent)
+      context: Working in /my-trading-bot/ with existing .git
+      expected: Skip gh repo create, git init, git remote, git push; run pipenv, pre-commit, commit
+
+    - name: "Nested monorepo detection traverses multiple levels"
+      persona: Maria (Platform engineer)
+      context: Working in /enterprise-platform/services/ with .git 2 levels up
+      expected: Find .git via traversal, skip repo creation
+
+    - name: "Clean directory triggers full git initialization"
+      persona: Sam (Developer)
+      context: Working in /Users/sam/katas/ with no .git anywhere
+      expected: Full git workflow (gh repo create, git init, git push)
+
+# =============================================================================
+# ALTERNATIVES CONSIDERED
+# =============================================================================
+alternatives_considered:
+  - name: "Git CLI detection (git rev-parse --is-inside-work-tree)"
+    description: "Use git's own detection mechanism via subprocess"
+    pros:
+      - "Battle-tested detection logic"
+      - "Handles all edge cases git knows about"
+    cons:
+      - "Requires git CLI on PATH"
+      - "Subprocess overhead (~100ms)"
+      - "External dependency"
+    verdict: rejected
+    rejection_reason: "Adds external dependency and slower execution per ADR-001"
+
+  - name: "Outermost .git traversal (traverse to filesystem root always)"
+    description: "Find the outermost .git repository in parent tree"
+    pros:
+      - "Could report which repository we're inside"
+    cons:
+      - "Unnecessary traversal when any .git detection suffices"
+      - "No business requirement to know which repo"
+    verdict: rejected
+    rejection_reason: "Adds complexity without delivering business value per ADR-001"
+
+  - name: "Environment variable override"
+    description: "Allow SKIP_GIT_INIT=1 to force behavior"
+    pros:
+      - "Simple override mechanism"
+    cons:
+      - "Another configuration point"
+      - "Risk of misconfiguration"
+      - "Redundant with directory_name parameter signal"
+    verdict: rejected
+    rejection_reason: "directory_name parameter already serves as explicit integration signal per ADR-001"
+
+selected_approach:
+  name: "Parent directory traversal with pathlib.Path"
+  description: |
+    Traverse from current directory upward, checking for .git at each level.
+    Stop at first .git found (directory or file). Uses Python standard library
+    only (pathlib.Path), handles worktrees, cross-platform compatible.
+  lines_of_code: ~10
+  dependencies: none (stdlib only)
+  reference: ADR-001
+
+# =============================================================================
+# IMPLEMENTATION GUIDANCE
+# =============================================================================
+implementation_guidance:
+  algorithm: |
+    from pathlib import Path
+
+    def is_inside_git_repo() -> bool:
+        current = Path.cwd()
+        while current != current.parent:  # Stop at filesystem root
+            if (current / ".git").exists():
+                return True
+            current = current.parent
+        return (current / ".git").exists()  # Check root itself
+
+  operations_to_skip_when_inside_repo:
+    - "gh repo create {kata_name} --private"
+    - "git init"
+    - "git remote add origin"
+    - "git branch -M main"  # Preserve user's current branch
+    - "git push -u origin main"
+
+  branch_handling:
+    inside_existing_repo: |
+      Do NOT change the branch. The user's current branch (e.g., feature/trading-api)
+      is the target for the validation commit. This preserves their workflow context.
+    greenfield_new_repo: |
+      Force 'main' branch with 'git branch -M main' to establish standard branch naming.
+      This only applies when creating a brand new repository.
+
+  operations_to_always_run:
+    - "pipenv install --dev"
+    - "pipenv run forceTypingExtensions"
+    - "pipenv run tests"
+    - "pipenv run install_pre_hooks"
+    - "git add --all"
+    - "git commit -m 'feat: add Python source scaffolding'"
+
+  estimated_changes:
+    file: hooks/post_gen_project.py
+    lines_added: ~60
+    lines_modified: ~20
+    total_effort: 1 day
+
+# =============================================================================
+# SUCCESS METRICS
+# =============================================================================
+success_metrics:
+  - metric: "Agent workflow success rate"
+    baseline: "0% (always fails in existing repos)"
+    target: "100% (automatic detection and skip)"
+
+  - metric: "Backwards compatibility"
+    baseline: "100% (standalone kata workflow)"
+    target: "100% (preserved for clean directories)"
+
+  - metric: "Test coverage"
+    baseline: "0% (no tests for detection)"
+    target: ">90% (unit tests for is_inside_git_repo)"
+
+# =============================================================================
+# METADATA
+# =============================================================================
+metadata:
+  created_at: 2026-01-08T00:00:00Z
+  researcher: Nova (researcher agent)
+  session_id: us-001-baseline-establishment
+  confidence: high
+
+  sources_consulted:
+    - path: docs/requirements/user-stories.md
+      type: requirements
+      reputation: high (DoR validated)
+
+    - path: docs/architecture/architecture.md
+      type: architecture
+      reputation: high (solution architect authored)
+
+    - path: docs/architecture/adrs/ADR-001-git-detection-algorithm.md
+      type: decision_record
+      reputation: high (accepted ADR)
+
+    - path: hooks/post_gen_project.py
+      type: source_code
+      reputation: high (current implementation)
+
+# =============================================================================
+# REVIEW METADATA (Added by software-crafter-reviewer)
+# =============================================================================
+review_metadata:
+  reviewer: software-crafter-reviewer (Haiku 4.5)
+  review_date: 2026-01-08
+  review_type: baseline_establishment
+  yaml_syntax_fixed: true
+  approval_status: APPROVED
