@@ -139,6 +139,60 @@ def push_to_remote() -> None:
     run_command("git push -u origin main")
 
 
+def open_ide(ide_option: str) -> None:
+    """Open IDE with the generated project directory.
+
+    Supports VS Code and PyCharm. IDE launch failures are non-fatal
+    to ensure scaffold generation completes successfully even if
+    IDE is unavailable.
+
+    Args:
+        ide_option: IDE to open - "none", "vscode", or "pycharm"
+
+    Reference: US-003 IDE Opening Control
+    """
+    if ide_option == "none":
+        print("IDE opening: none (skipped)")
+        return
+
+    print(f"Opening IDE: {ide_option}...")
+
+    try:
+        if ide_option == "vscode":
+            # VS Code CLI: 'code' command opens directory
+            subprocess.run(
+                ["code", PROJECT_DIRECTORY],
+                check=False,  # Non-fatal if VS Code not installed
+                timeout=10,
+            )
+        elif ide_option == "pycharm":
+            # PyCharm: try direct command first, fallback to macOS open
+            import platform
+
+            if platform.system() == "Darwin":
+                # macOS: use 'open -a PyCharm' for .app bundles
+                subprocess.run(
+                    ["open", "-a", "PyCharm", PROJECT_DIRECTORY],
+                    check=False,
+                    timeout=10,
+                )
+            else:
+                # Linux/Windows: use pycharm command
+                subprocess.run(
+                    ["pycharm", PROJECT_DIRECTORY],
+                    check=False,
+                    timeout=10,
+                )
+        else:
+            print(f"  Warning: Unknown IDE option '{ide_option}', skipping")
+    except FileNotFoundError:
+        print(f"  Warning: {ide_option} command not found, skipping IDE open")
+    except subprocess.TimeoutExpired:
+        print(f"  Warning: {ide_option} launch timed out, continuing anyway")
+    except Exception as e:
+        print(f"  Warning: Failed to open {ide_option}: {e}")
+
+
 def main():
     """Main orchestration for post-generation hook.
 
@@ -149,10 +203,12 @@ def main():
     4. Install pre-commit hooks (always)
     5. Create validation commit (always)
     6. Push to remote (only if new repository)
+    7. Open IDE (if requested) - US-003
 
     Reference: docs/architecture/architecture.md Section 5
     """
     kata_name = "{{ cookiecutter.directory_name }}"
+    ide_option = "{{ cookiecutter.open_ide }}"
 
     # Step 1: Detect git repository
     inside_git_repo = is_inside_git_repo()
@@ -182,6 +238,9 @@ def main():
         push_to_remote()
     else:
         print("Skipping push (inside existing repo - manage push manually)")
+
+    # Step 7: Open IDE (US-003)
+    open_ide(ide_option)
 
     print("Scaffolding complete!")
 
