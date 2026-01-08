@@ -192,20 +192,81 @@ class TestIsInsideGitRepo:
         # Assert
         assert result is True
 
+    # =========================================================================
+    # NEGATIVE / BOUNDARY CASE TESTS - Step 02-02 (TDD Red Phase)
+    # =========================================================================
+
+    def test_returns_false_when_no_git_in_tree(self, tmp_path, monkeypatch):
+        """AC-007: Clean directory returns False for full git init."""
+        # Arrange - no .git anywhere
+        clean_dir = tmp_path / "clean_project"
+        clean_dir.mkdir()
+        monkeypatch.chdir(clean_dir)
+
+        # Act
+        result = is_inside_git_repo()  # noqa: F821 - TDD Red phase
+
+        # Assert
+        assert result is False
+
+    def test_stops_at_filesystem_root(self, tmp_path, monkeypatch):
+        """Edge case: Traversal stops at filesystem root without infinite loop."""
+        # Arrange - deep directory with no .git
+        deep_dir = tmp_path / "a" / "b" / "c" / "d" / "e"
+        deep_dir.mkdir(parents=True)
+        monkeypatch.chdir(deep_dir)
+
+        # Act - should complete without hanging
+        import signal
+        import platform
+
+        def timeout_handler(signum, frame):
+            raise TimeoutError("Function did not terminate")
+
+        # Unix only: signal.alarm doesn't work on Windows
+        if platform.system() != "Windows":
+            signal.signal(signal.SIGALRM, timeout_handler)
+            signal.alarm(2)  # 2 second timeout
+
+        try:
+            result = is_inside_git_repo()  # noqa: F821 - TDD Red phase
+            if platform.system() != "Windows":
+                signal.alarm(0)  # Cancel alarm
+        except TimeoutError:
+            pytest.fail(
+                "is_inside_git_repo() did not terminate - possible infinite loop"
+            )
+
+        # Assert
+        assert result is False
+
+    def test_does_not_detect_sibling_git_directory(self, tmp_path, monkeypatch):
+        """Edge case: .git in sibling directory should not be detected."""
+        # Arrange
+        sibling_with_git = tmp_path / "sibling_repo"
+        sibling_with_git.mkdir()
+        (sibling_with_git / ".git").mkdir()
+
+        current_dir = tmp_path / "my_project"
+        current_dir.mkdir()
+        monkeypatch.chdir(current_dir)
+
+        # Act
+        result = is_inside_git_repo()  # noqa: F821 - TDD Red phase
+
+        # Assert - should NOT find sibling's .git
+        assert result is False
+
 
 # =============================================================================
-# FUTURE TESTS - Will be added in subsequent TDD steps
+# IMPLEMENTATION NOTES
 # =============================================================================
 #
-# The following tests will be added as the implementation progresses:
+# All 7 tests in this file are in TDD Red phase:
+# - 4 positive tests (git detection works)
+# - 3 negative/boundary tests (no git, root traversal, sibling isolation)
 #
-# 1. test_returns_false_when_no_git_marker_exists
-#    - Standalone mode: directory has no .git anywhere in parent chain
-#
-# 2. test_should_not_detect_repository_when_git_marker_in_sibling_directory
-#    - Edge case: .git in sibling directory should not count
-#
-# 3. test_should_handle_filesystem_root_gracefully
-#    - Edge case: traversal reaches / or C:\ without finding .git
+# All tests should fail with NameError: name 'is_inside_git_repo' is not defined
+# until the function is implemented in the Green phase.
 #
 # =============================================================================
