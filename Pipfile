@@ -7,6 +7,8 @@ name = "pypi"
 packaging = "*"
 
 [dev-packages]
+pytest = "*"
+pytest-bdd = "*"
 
 [requires]
 python_version = "3.10"
