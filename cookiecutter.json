@@ -5,6 +5,8 @@
   "_use_dated_prefix_help": "Add YYYYMMDD date prefix to directory name for chronological organization.",
   "directory_name": "{% if cookiecutter.use_dated_prefix == 'yes' %}{% now 'local', '%Y%m%d' %}_{{ cookiecutter.kata_name.lower().replace(' ', '_') }}{% else %}{{ cookiecutter.kata_name.lower().replace(' ', '_') }}{% endif %}",
   "_directory_name_help": "Custom directory name. When provided explicitly, signals integration mode (skips GitHub repo creation). Leave blank to use auto-generated name from kata_name.",
+  "open_ide": ["none", "vscode", "pycharm"],
+  "_open_ide_help": "IDE to open after scaffold generation. 'none' (default) for safe automation, 'vscode' for VS Code, 'pycharm' for PyCharm.",
   "_copy_without_render": [
     ".github/workflows/cicd.yml"
   ]
