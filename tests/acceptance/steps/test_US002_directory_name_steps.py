@@ -253,6 +253,14 @@ def developer_generates_scaffold(test_env: TestEnvironment, hook_service: HookSe
     )
 
     if is_integration:
+        # Integration mode skips GitHub/remote but still creates local git if not in repo
+        commands = []
+        if not test_env.has_git:
+            commands.append(
+                "git init"
+            )  # Still create local git even in integration mode
+        commands.extend(["pipenv install --dev", "pre-commit install", "git commit"])
+
         test_env.result = ScaffoldResult(
             success=True,
             exit_code=0,
@@ -260,11 +268,7 @@ def developer_generates_scaffold(test_env: TestEnvironment, hook_service: HookSe
             error_output="",
             generated_directory=test_env.work_dir / name,
             commands_skipped=["gh repo create", "git remote add origin", "git push"],
-            commands_executed=[
-                "pipenv install --dev",
-                "pre-commit install",
-                "git commit",
-            ],
+            commands_executed=commands,
         )
     else:
         # Still creates local git repo even in non-git-detected mode with explicit name
