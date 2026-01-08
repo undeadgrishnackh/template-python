@@ -1,6 +1,7 @@
 {
   "kata_name": "DummyKata",
-  "directory_name": "{% now 'local', '%Y%m%d' %}_{{ cookiecutter.kata_name.lower().replace(' ', '_') }}",
+  "use_dated_prefix": ["yes", "no"],
+  "directory_name": "{% if cookiecutter.use_dated_prefix == 'yes' %}{% now 'local', '%Y%m%d' %}_{{ cookiecutter.kata_name.lower().replace(' ', '_') }}{% else %}{{ cookiecutter.kata_name.lower().replace(' ', '_') }}{% endif %}",
   "_copy_without_render": [
     ".github/workflows/cicd.yml"
   ]
