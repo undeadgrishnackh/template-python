@@ -26,7 +26,8 @@
   },
   "state": {
     "status": "pending",
-    "ready_for_execution": false
+    "ready_for_execution": true,
+    "blocker_resolved": "Background step definition added to test_US003_ide_control_steps.py on 2026-01-08"
   },
   "reviews": {
     "review_date": "2026-01-08",

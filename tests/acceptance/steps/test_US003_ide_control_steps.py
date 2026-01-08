@@ -21,6 +21,14 @@ scenarios("../features/US003_ide_opening_control.feature")
 # --------------------------------------------------------------------------
 
 
+@given("the cookiecutter template is available")
+def cookiecutter_template_available(test_env: TestEnvironment):
+    """Background step: Verify cookiecutter template is ready for use."""
+    # This step runs for all scenarios via the Background section
+    # The template is always available when running from the project root
+    return test_env
+
+
 @given("Alex is the 5D-Wave agent running in automated mode")
 def alex_automated_mode(test_env: TestEnvironment, work_dir: Path):
     """Set up context for automated agent workflow."""

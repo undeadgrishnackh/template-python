@@ -9,8 +9,9 @@
   "dependencies": ["01-01"],
   "files_to_modify": [
     {
-      "path": "tests/acceptance/step_defs/test_us002_directory_name_configuration_steps.py",
-      "action": "modify"
+      "path": "tests/acceptance/steps/test_US002_directory_name_steps.py",
+      "action": "verify",
+      "note": "Step definitions already exist. Task verifies backwards-compatibility scenario is executable."
     }
   ],
   "implementation_details": "Add step definitions for default behavior scenario:\n\n1. Given step: \"Sam is starting a fresh coding kata\"\n   - Set up clean test directory (no .git)\n\n2. When step: \"Sam runs the cookiecutter without specifying directory name\"\n   - Invoke cookiecutter with kata_name only\n   - Let directory_name use default Jinja2 expression\n\n3. Then steps:\n   - \"Sam is prompted for a kata name\" (verify prompting behavior)\n   - \"the hook creates a dated directory with the kata name\"\n     Assert directory matches pattern: YYYYMMDD_{kata_name}",
@@ -19,7 +20,7 @@
     "Test runs and passes (existing behavior already works)",
     "Test serves as regression guard for backwards compatibility"
   ],
-  "test_command": "cd /Users/michele.brissoni/ProgettiGit/UndeadGrishnackh/_template_Python_ && pipenv run pytest tests/acceptance/step_defs/test_us002_directory_name_configuration_steps.py -v -k 'default' --tb=short",
+  "test_command": "cd /Users/michele.brissoni/ProgettiGit/UndeadGrishnackh/_template_Python_ && pipenv run pytest tests/acceptance/steps/test_US002_directory_name_steps.py -v -k 'Default_behavior_preserved' --tb=short",
   "expected_outcome": "Test passes confirming existing dated prefix behavior works",
   "context": {
     "project_id": "us-002-003-directory-ide-features",
@@ -29,7 +30,7 @@
   },
   "state": {
     "status": "pending",
-    "ready_for_execution": false
+    "ready_for_execution": true
   },
   "reviews": [
     {
