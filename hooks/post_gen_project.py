@@ -103,6 +103,51 @@ def initialize_git_repository(kata_name: str) -> None:
     run_command("git branch -M main")
 
 
+def install_pre_commit_hooks() -> None:
+    """Install pre-commit hooks for local quality gate.
+
+    Always runs regardless of git repository status.
+    """
+    print("Installing pre-commit hooks...")
+    run_command("pipenv run install_pre_hooks")
+
+
+def create_validation_commit(kata_name: str) -> None:
+    """Create validation commit with scaffolding.
+
+    Always runs to commit the generated files.
+    In integration mode: commits to current branch
+    In standalone mode: commits to main branch
+
+    Args:
+        kata_name: Name used in commit message
+    """
+    print("Creating validation commit...")
+    print("  Staging all files...")
+    run_command("git add --all")
+    print("  Committing scaffolding...")
+    run_command(f'git commit -m "feat: jumpstart {kata_name} with cookiecutter"')
+
+
+def push_to_remote() -> None:
+    """Push initial commit to remote repository.
+
+    Only runs in standalone mode (new repository).
+    Skipped in integration mode (inside existing repo).
+    """
+    print("Pushing to remote...")
+    run_command("git push -u origin main")
+
+
+def launch_ide() -> None:
+    """Launch IDE for development.
+
+    Opens VS Code in the project directory.
+    """
+    print("Launching IDE...")
+    run_command("code .")
+
+
 if __name__ == "__main__":
     print("👷🏻 Creating virtual environment...")
     run_command("pipenv install --dev")
