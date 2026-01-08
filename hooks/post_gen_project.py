@@ -1,9 +1,37 @@
 #!/usr/bin/env python
 import os
+from pathlib import Path
 import subprocess
 
 
 PROJECT_DIRECTORY = os.path.realpath(os.path.curdir)
+
+
+def is_inside_git_repo() -> bool:
+    """Detect if current directory is inside a git repository.
+
+    Traverses parent directories looking for .git (directory or file).
+    Returns True on first match, False if filesystem root reached.
+
+    Handles:
+    - Standard .git directories
+    - Git worktrees (.git as file)
+    - Submodules (.git as file)
+
+    Reference: ADR-001-git-detection-algorithm.md
+
+    Returns:
+        bool: True if inside git repo, False otherwise
+    """
+    current = Path.cwd()
+    while current != current.parent:  # Stop at filesystem root
+        git_path = current / ".git"
+        if git_path.exists():  # Works for both directory and file
+            return True
+        current = current.parent
+    # Check root directory itself
+    return (current / ".git").exists()
+
 
 kata_name = "{{ cookiecutter.directory_name }}"
 
