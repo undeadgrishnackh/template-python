@@ -148,45 +148,52 @@ def launch_ide() -> None:
     run_command("code .")
 
 
+def main():
+    """Main orchestration for post-generation hook.
+
+    Execution flow:
+    1. Detect if inside existing git repository
+    2. Setup environment (always)
+    3. Initialize git repository (if not inside existing repo)
+    4. Install pre-commit hooks (always)
+    5. Create validation commit (always)
+    6. Push to remote (only if new repository)
+
+    Reference: docs/architecture/architecture.md Section 5
+    """
+    kata_name = "{{ cookiecutter.directory_name }}"
+
+    # Step 1: Detect git repository
+    inside_git_repo = is_inside_git_repo()
+
+    if inside_git_repo:
+        print("Detected existing git repository - running in integration mode")
+    else:
+        print("No existing git repository - running in standalone mode")
+
+    # Step 2: Setup environment (always)
+    setup_environment()
+
+    # Step 3: Initialize git repository (standalone only)
+    if not inside_git_repo:
+        initialize_git_repository(kata_name)
+    else:
+        print("Skipping repository creation (inside existing repo)")
+
+    # Step 4: Install pre-commit hooks (always)
+    install_pre_commit_hooks()
+
+    # Step 5: Create validation commit (always)
+    create_validation_commit(kata_name)
+
+    # Step 6: Push to remote (standalone only)
+    if not inside_git_repo:
+        push_to_remote()
+    else:
+        print("Skipping push (inside existing repo - manage push manually)")
+
+    print("Scaffolding complete!")
+
+
 if __name__ == "__main__":
-    print("👷🏻 Creating virtual environment...")
-    run_command("pipenv install --dev")
-
-    print(
-        "👨🏻‍🔧 Forcing virtual environment with the new typing-extensions packaging..."
-    )
-    run_command("pipenv run forceTypingExtensions")
-
-    print("🧪 running dry test cycle...")
-    run_command("pipenv run tests")
-
-    print("😻 git repo creation...")
-    run_command(f"gh repo create {kata_name} --private")
-
-    print("😻 Git initializing...")
-    run_command("git init")
-
-    print("🐍 Creating local quality gate with git hooks...")
-    run_command("pipenv run install_pre_hooks")
-
-    print("😻 Git add remote...")
-    run_command(
-        f"git remote add origin git@github.com:undeadgrishnackh/{kata_name}.git"
-    )
-
-    print("😻 Git branch main...")
-    run_command("git branch -M main")
-
-    print("😻 git add all the items in the repo...")
-    run_command("git add --all")
-
-    print("😻 git commit the jumpstart...")
-    run_command(f'git commit -m "feat: jumpstart {kata_name} with cookiecutter"')
-
-    print("😻 git push the jumpstart...")
-    run_command("git push -u origin main")
-
-    print("👩🏻‍💻 time to code!")
-    run_command("code .")
-
-    print("👋🏿 bye bye! 🐍")
+    main()
