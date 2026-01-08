@@ -23,6 +23,7 @@ Reference: docs/architecture/adrs/ADR-001-git-detection-algorithm.md
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, NewType
 
@@ -30,6 +31,19 @@ import pytest
 
 if TYPE_CHECKING:
     from typing import Generator
+
+# =============================================================================
+# IMPORT FUNCTION UNDER TEST
+# =============================================================================
+# This will fail until implementation in Phase 3 (Green phase)
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / "hooks"))
+
+try:
+    from post_gen_project import is_inside_git_repo
+except ImportError:
+    # Function not yet implemented - define placeholder for test collection
+    def is_inside_git_repo():
+        raise NotImplementedError("Function not yet implemented")
 
 
 # =============================================================================
@@ -144,7 +158,7 @@ class TestIsInsideGitRepo:
         monkeypatch.chdir(tmp_path)
 
         # Act
-        result = is_inside_git_repo()  # noqa: F821 - TDD Red phase, function pending
+        result = is_inside_git_repo()
 
         # Assert
         assert result is True
@@ -159,7 +173,7 @@ class TestIsInsideGitRepo:
         monkeypatch.chdir(nested_dir)
 
         # Act
-        result = is_inside_git_repo()  # noqa: F821 - TDD Red phase, function pending
+        result = is_inside_git_repo()
 
         # Assert
         assert result is True
@@ -174,7 +188,7 @@ class TestIsInsideGitRepo:
         monkeypatch.chdir(nested_dir)
 
         # Act
-        result = is_inside_git_repo()  # noqa: F821 - TDD Red phase, function pending
+        result = is_inside_git_repo()
 
         # Assert
         assert result is True
@@ -187,7 +201,7 @@ class TestIsInsideGitRepo:
         monkeypatch.chdir(tmp_path)
 
         # Act
-        result = is_inside_git_repo()  # noqa: F821 - TDD Red phase, function pending
+        result = is_inside_git_repo()
 
         # Assert
         assert result is True
@@ -204,7 +218,7 @@ class TestIsInsideGitRepo:
         monkeypatch.chdir(clean_dir)
 
         # Act
-        result = is_inside_git_repo()  # noqa: F821 - TDD Red phase
+        result = is_inside_git_repo()
 
         # Assert
         assert result is False
@@ -229,7 +243,7 @@ class TestIsInsideGitRepo:
             signal.alarm(2)  # 2 second timeout
 
         try:
-            result = is_inside_git_repo()  # noqa: F821 - TDD Red phase
+            result = is_inside_git_repo()
             if platform.system() != "Windows":
                 signal.alarm(0)  # Cancel alarm
         except TimeoutError:
@@ -252,7 +266,7 @@ class TestIsInsideGitRepo:
         monkeypatch.chdir(current_dir)
 
         # Act
-        result = is_inside_git_repo()  # noqa: F821 - TDD Red phase
+        result = is_inside_git_repo()
 
         # Assert - should NOT find sibling's .git
         assert result is False
@@ -266,7 +280,12 @@ class TestIsInsideGitRepo:
 # - 4 positive tests (git detection works)
 # - 3 negative/boundary tests (no git, root traversal, sibling isolation)
 #
-# All tests should fail with NameError: name 'is_inside_git_repo' is not defined
-# until the function is implemented in the Green phase.
+# Import Strategy:
+# - Uses sys.path to import from hooks/ directory
+# - Try/except handles case where function not yet implemented
+# - Placeholder raises NotImplementedError for test collection
+#
+# All tests should fail with NotImplementedError until the function is
+# implemented in hooks/post_gen_project.py during the Green phase.
 #
 # =============================================================================
