@@ -21,6 +21,14 @@ scenarios("../features/US002_directory_name_configuration.feature")
 # --------------------------------------------------------------------------
 
 
+@given("the cookiecutter template is available")
+def template_available(template_dir: Path):
+    """Verify the cookiecutter template exists (Background step)."""
+    assert template_dir.exists(), f"Template directory not found: {template_dir}"
+    assert (template_dir / "cookiecutter.json").exists(), "cookiecutter.json not found"
+    assert (template_dir / "hooks").exists(), "hooks directory not found"
+
+
 @given("Maria is in a platform services directory")
 def maria_platform_context(test_env: TestEnvironment, work_dir: Path):
     """Set up context for platform engineer."""
@@ -284,8 +292,13 @@ def alex_generates_scaffold(test_env: TestEnvironment, hook_service: HookService
 
 
 @when(parsers.parse('Sam enters "{name}" as the kata name'))
+@then(parsers.parse('Sam enters "{name}" as the kata name'))
 def sam_enters_kata_name(test_env: TestEnvironment, name: str):
-    """Sam provides kata name at prompt."""
+    """Sam provides kata name at prompt.
+
+    Note: This step is used as both When and Then depending on scenario context.
+    In backwards-compatibility scenario, it follows a Then step (so becomes Then).
+    """
     test_env.kata_name = name
     test_env.directory_name = f"20260108_{name.lower().replace(' ', '_')}"
     test_env.result.generated_directory = test_env.work_dir / test_env.directory_name
@@ -547,3 +560,15 @@ def hook_fails_clear_error(test_env: TestEnvironment):
     """Verify clear error on failure."""
     if not test_env.result.success:
         assert len(test_env.result.error_output) > 0
+
+
+@then("the hook provides a meaningful response about the empty name")
+def hook_meaningful_response_empty_name(test_env: TestEnvironment):
+    """Verify meaningful response for empty directory name."""
+    # Empty name should either fallback to prompt or provide clear feedback
+    assert test_env.result is not None, "Result should exist"
+    # Fallback to prompting is a meaningful response
+    if test_env.result.success:
+        assert "prompt_kata_name" in test_env.result.commands_executed, (
+            "Empty name should trigger kata name prompt as fallback"
+        )
