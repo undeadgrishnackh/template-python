@@ -139,15 +139,6 @@ def push_to_remote() -> None:
     run_command("git push -u origin main")
 
 
-def launch_ide() -> None:
-    """Launch IDE for development.
-
-    Opens VS Code in the project directory.
-    """
-    print("Launching IDE...")
-    run_command("code .")
-
-
 def main():
     """Main orchestration for post-generation hook.
 
