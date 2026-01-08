@@ -6,6 +6,7 @@ and the integration signal behavior.
 """
 
 from pathlib import Path
+from typing import Optional, Tuple
 
 from pytest_bdd import given, parsers, scenarios, then, when
 
@@ -14,6 +15,72 @@ from tests.doubles.hook_service import HookService, ScaffoldResult
 
 # Load all scenarios from the feature file
 scenarios("../features/US002_directory_name_configuration.feature")
+
+
+# --------------------------------------------------------------------------
+# Validation Utilities - Extracted for DRY principle (Level 2 refactoring)
+# --------------------------------------------------------------------------
+
+
+def contains_path_separators(name: str) -> bool:
+    """Check if directory name contains path separator characters."""
+    return "/" in name or "\\" in name
+
+
+def validate_directory_name(
+    name: str, work_dir: Path
+) -> Tuple[bool, Optional[ScaffoldResult]]:
+    """
+    Validate directory name and return error result if invalid.
+
+    Returns:
+        Tuple of (is_valid, error_result). If is_valid is True, error_result is None.
+    """
+    # Check for existing directory
+    target_dir = work_dir / name
+    if target_dir.exists():
+        return False, ScaffoldResult(
+            success=False,
+            exit_code=1,
+            output="",
+            error_output=f"ERROR: Directory '{name}' already exists. Remove or rename it first.",
+            generated_directory=None,
+        )
+
+    # Check for path separators (invalid characters)
+    if contains_path_separators(name):
+        return False, ScaffoldResult(
+            success=False,
+            exit_code=1,
+            output="",
+            error_output=f"ERROR: Invalid directory name '{name}'. Path separators not allowed.",
+            generated_directory=None,
+        )
+
+    return True, None
+
+
+def create_invalid_characters_error(name: str) -> ScaffoldResult:
+    """Create error result for invalid directory name characters."""
+    return ScaffoldResult(
+        success=False,
+        exit_code=1,
+        output="",
+        error_output=f"ERROR: Invalid directory name '{name}'. Characters not allowed: / \\",
+        generated_directory=None,
+    )
+
+
+def create_prompt_fallback_result() -> ScaffoldResult:
+    """Create result indicating fallback to kata name prompt."""
+    return ScaffoldResult(
+        success=True,
+        exit_code=0,
+        output="",
+        error_output="",
+        generated_directory=None,
+        commands_executed=["prompt_kata_name"],
+    )
 
 
 # --------------------------------------------------------------------------
@@ -160,27 +227,10 @@ def maria_runs_with_directory_name(
     """Maria runs cookiecutter with explicit directory name."""
     test_env.directory_name = name
 
-    # Check for existing directory error
-    target_dir = test_env.work_dir / name
-    if target_dir.exists():
-        test_env.result = ScaffoldResult(
-            success=False,
-            exit_code=1,
-            output="",
-            error_output=f"ERROR: Directory '{name}' already exists. Remove or rename it first.",
-            generated_directory=None,
-        )
-        return test_env
-
-    # Check for invalid directory name
-    if "/" in name or "\\" in name:
-        test_env.result = ScaffoldResult(
-            success=False,
-            exit_code=1,
-            output="",
-            error_output=f"ERROR: Invalid directory name '{name}'. Path separators not allowed.",
-            generated_directory=None,
-        )
+    # Validate directory name using extracted utility
+    is_valid, error_result = validate_directory_name(name, test_env.work_dir)
+    if not is_valid:
+        test_env.result = error_result
         return test_env
 
     is_integration = hook_service.is_integration_mode(
@@ -219,14 +269,7 @@ def sam_runs_without_directory_name(
     """Sam runs cookiecutter in default mode."""
     test_env.directory_name = None  # Will be prompted
     test_env.kata_name = None  # Will be prompted
-    test_env.result = ScaffoldResult(
-        success=True,
-        exit_code=0,
-        output="",
-        error_output="",
-        generated_directory=None,  # Will be set after prompt
-        commands_executed=["prompt_kata_name"],  # Indicates prompt occurred
-    )
+    test_env.result = create_prompt_fallback_result()
     return test_env
 
 
@@ -236,14 +279,7 @@ def developer_generates_scaffold(test_env: TestEnvironment, hook_service: HookSe
     name = test_env.directory_name
 
     if not name:
-        test_env.result = ScaffoldResult(
-            success=True,
-            exit_code=0,
-            output="",
-            error_output="",
-            generated_directory=None,
-            commands_executed=["prompt_kata_name"],
-        )
+        test_env.result = create_prompt_fallback_result()
         return test_env
 
     is_integration = hook_service.is_integration_mode(
@@ -320,27 +356,14 @@ def developer_attempts_scaffold(test_env: TestEnvironment, hook_service: HookSer
     """Developer attempts scaffold (may fail)."""
     name = test_env.directory_name
 
-    # Validate directory name
-    if name and ("/" in name or "\\" in name):
-        test_env.result = ScaffoldResult(
-            success=False,
-            exit_code=1,
-            output="",
-            error_output=f"ERROR: Invalid directory name '{name}'. Characters not allowed: / \\",
-            generated_directory=None,
-        )
+    # Validate directory name using extracted utilities
+    if name and contains_path_separators(name):
+        test_env.result = create_invalid_characters_error(name)
         return test_env
 
     if not name or name.strip() == "":
-        # Empty name - fallback to prompt or error
-        test_env.result = ScaffoldResult(
-            success=True,
-            exit_code=0,
-            output="",
-            error_output="",
-            generated_directory=None,
-            commands_executed=["prompt_kata_name"],
-        )
+        # Empty name - fallback to prompt
+        test_env.result = create_prompt_fallback_result()
         return test_env
 
     return developer_generates_scaffold(test_env, hook_service)

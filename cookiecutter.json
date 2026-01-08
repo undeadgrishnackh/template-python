@@ -1,7 +1,10 @@
 {
   "kata_name": "DummyKata",
+  "_kata_name_help": "Name of the coding kata (e.g., 'FizzBuzz', 'Roman Numerals'). Used for directory naming.",
   "use_dated_prefix": ["yes", "no"],
+  "_use_dated_prefix_help": "Add YYYYMMDD date prefix to directory name for chronological organization.",
   "directory_name": "{% if cookiecutter.use_dated_prefix == 'yes' %}{% now 'local', '%Y%m%d' %}_{{ cookiecutter.kata_name.lower().replace(' ', '_') }}{% else %}{{ cookiecutter.kata_name.lower().replace(' ', '_') }}{% endif %}",
+  "_directory_name_help": "Custom directory name. When provided explicitly, signals integration mode (skips GitHub repo creation). Leave blank to use auto-generated name from kata_name.",
   "_copy_without_render": [
     ".github/workflows/cicd.yml"
   ]
