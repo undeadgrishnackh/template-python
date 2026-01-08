@@ -120,159 +120,77 @@ def directory_with_git_worktree(tmp_path: Path) -> Generator[Path, None, None]:
 
 
 # =============================================================================
-# TEST CLASS - Git Repository Detection Behaviors
+# TEST CLASS - is_inside_git_repo() Detection Behaviors
 # =============================================================================
 
 
-class TestGitRepositoryDetection:
-    """
-    Test suite for git repository detection.
+class TestIsInsideGitRepo:
+    """Test suite for is_inside_git_repo() function.
 
     Verifies the algorithm traverses parent directories to find .git markers,
     correctly distinguishing between:
     - Standalone mode: No git repository found -> full git init
     - Integration mode: Git repository found -> skip git init
 
-    Each test method name follows business language:
-    - should_<expected_outcome>_when_<business_scenario>
+    TDD Red Phase: These tests call is_inside_git_repo() which does not exist yet.
+    All tests should fail with NameError until the function is implemented.
     """
 
-    # -------------------------------------------------------------------------
-    # Scenario: Standalone Mode - No Git Repository
-    # -------------------------------------------------------------------------
-
-    def test_should_not_detect_repository_when_directory_has_no_git_marker(
-        self, temporary_directory: Path
-    ) -> None:
-        """
-        GIVEN a directory with no .git marker
-        WHEN checking if inside a git repository
-        THEN detection should return False (standalone mode)
-
-        Business Impact:
-            Cookiecutter will create a new git repository for the developer.
-        """
-        # Arrange - temporary_directory fixture provides clean directory
-        _start_path = temporary_directory  # Will be used when implementation exists
+    def test_detects_git_directory_in_current_directory(self, tmp_path, monkeypatch):
+        """AC-001: Detection works for .git in current directory."""
+        # Arrange
+        git_dir = tmp_path / ".git"
+        git_dir.mkdir()
+        monkeypatch.chdir(tmp_path)
 
         # Act
-        # NOTE: Implementation pending - TDD red phase
-        # result = is_inside_git_repo(_start_path)
+        result = is_inside_git_repo()  # noqa: F821 - TDD Red phase, function pending
 
         # Assert
-        # assert result is False
-        pytest.skip("Implementation pending - TDD red phase (step 01-01)")
+        assert result is True
 
-    # -------------------------------------------------------------------------
-    # Scenario: Integration Mode - Inside Git Repository
-    # -------------------------------------------------------------------------
-
-    def test_should_detect_repository_when_git_marker_in_current_directory(
-        self, directory_inside_git_repo: Path
-    ) -> None:
-        """
-        GIVEN a directory containing a .git marker
-        WHEN checking if inside a git repository
-        THEN detection should return True (integration mode)
-
-        Business Impact:
-            Cookiecutter will skip git repository creation to avoid conflicts.
-        """
-        # Arrange - fixture provides directory with .git
-        _start_path = (
-            directory_inside_git_repo  # Will be used when implementation exists
-        )
+    def test_detects_git_directory_in_parent_directory(self, tmp_path, monkeypatch):
+        """AC-002: Detection works for .git at any parent level."""
+        # Arrange - .git 2 levels up
+        git_dir = tmp_path / ".git"
+        git_dir.mkdir()
+        nested_dir = tmp_path / "level1" / "level2"
+        nested_dir.mkdir(parents=True)
+        monkeypatch.chdir(nested_dir)
 
         # Act
-        # result = is_inside_git_repo(_start_path)
+        result = is_inside_git_repo()  # noqa: F821 - TDD Red phase, function pending
 
         # Assert
-        # assert result is True
-        pytest.skip("Implementation pending - TDD red phase (step 01-01)")
+        assert result is True
 
-    def test_should_detect_repository_when_git_marker_in_parent_directory(
-        self, directory_with_nested_path_inside_git_repo: Path
-    ) -> None:
-        """
-        GIVEN a directory 3 levels below a .git marker
-        WHEN checking if inside a git repository
-        THEN detection should traverse upward and return True
-
-        Business Impact:
-            Developers often run cookiecutter from subdirectories.
-            Detection must find the repository regardless of nesting depth.
-        """
-        # Arrange - fixture provides nested path inside git repo
-        _start_path = directory_with_nested_path_inside_git_repo  # Will be used when implementation exists
+    def test_detects_git_directory_three_levels_up(self, tmp_path, monkeypatch):
+        """AC-002: Detection works for .git 3+ levels up (monorepo scenario)."""
+        # Arrange - .git 3 levels up
+        git_dir = tmp_path / ".git"
+        git_dir.mkdir()
+        nested_dir = tmp_path / "services" / "trading" / "source"
+        nested_dir.mkdir(parents=True)
+        monkeypatch.chdir(nested_dir)
 
         # Act
-        # result = is_inside_git_repo(_start_path)
+        result = is_inside_git_repo()  # noqa: F821 - TDD Red phase, function pending
 
         # Assert
-        # assert result is True
-        pytest.skip("Implementation pending - TDD red phase (step 01-01)")
+        assert result is True
 
-    def test_should_detect_repository_when_using_git_worktree(
-        self, directory_with_git_worktree: Path
-    ) -> None:
-        """
-        GIVEN a directory where .git is a file (worktree format)
-        WHEN checking if inside a git repository
-        THEN detection should return True (worktrees are valid repos)
-
-        Business Impact:
-            Supports developers using git worktrees for parallel development.
-            Algorithm uses exists() not is_dir() for this reason.
-        """
-        # Arrange - fixture provides worktree with .git file
-        _start_path = (
-            directory_with_git_worktree  # Will be used when implementation exists
-        )
+    def test_detects_git_file_for_worktree(self, tmp_path, monkeypatch):
+        """AC-003: Detection works for .git file (worktrees, submodules)."""
+        # Arrange - .git as file (worktree format)
+        git_file = tmp_path / ".git"
+        git_file.write_text("gitdir: /path/to/actual/git/dir")
+        monkeypatch.chdir(tmp_path)
 
         # Act
-        # result = is_inside_git_repo(_start_path)
+        result = is_inside_git_repo()  # noqa: F821 - TDD Red phase, function pending
 
         # Assert
-        # assert result is True
-        pytest.skip("Implementation pending - TDD red phase (step 01-01)")
-
-    # -------------------------------------------------------------------------
-    # Scenario: Edge Cases - Boundary Conditions
-    # -------------------------------------------------------------------------
-
-    def test_should_not_detect_repository_when_git_marker_in_sibling_directory(
-        self, tmp_path: Path
-    ) -> None:
-        """
-        GIVEN a .git marker in a sibling directory (not parent chain)
-        WHEN checking if inside a git repository
-        THEN detection should return False (siblings don't count)
-
-        Business Impact:
-            A git repo in a neighboring folder doesn't affect our project.
-            Only ancestors in the directory tree matter.
-
-        Directory Structure:
-            tmp_path/
-            +-- other_project/
-            |   +-- .git/    <-- NOT in our parent chain
-            +-- our_project/  <-- We are here (no .git above)
-        """
-        # Arrange - create sibling with git, we're in the other sibling
-        sibling_project = tmp_path / "other_project"
-        sibling_project.mkdir()
-        (sibling_project / ".git").mkdir()
-
-        our_project = tmp_path / "our_project"
-        our_project.mkdir()
-        _start_path = our_project  # Will be used when implementation exists
-
-        # Act
-        # result = is_inside_git_repo(_start_path)
-
-        # Assert
-        # assert result is False
-        pytest.skip("Implementation pending - TDD red phase (step 01-01)")
+        assert result is True
 
 
 # =============================================================================
@@ -281,13 +199,13 @@ class TestGitRepositoryDetection:
 #
 # The following tests will be added as the implementation progresses:
 #
-# 1. test_should_handle_filesystem_root_gracefully
+# 1. test_returns_false_when_no_git_marker_exists
+#    - Standalone mode: directory has no .git anywhere in parent chain
+#
+# 2. test_should_not_detect_repository_when_git_marker_in_sibling_directory
+#    - Edge case: .git in sibling directory should not count
+#
+# 3. test_should_handle_filesystem_root_gracefully
 #    - Edge case: traversal reaches / or C:\ without finding .git
-#
-# 2. test_should_use_current_directory_when_no_path_specified
-#    - Default behavior: is_inside_git_repo() with no args uses cwd
-#
-# 3. test_should_resolve_symlinks_in_path
-#    - Symlink handling: Path.resolve() follows symlinks
 #
 # =============================================================================
