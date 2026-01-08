@@ -96,5 +96,4 @@ Feature: Configurable Source Directory Name
   Scenario: Empty directory name handled gracefully
     Given a developer provides an empty directory name
     When the developer attempts to generate the scaffold
-    Then the hook falls back to prompting for kata name
-    Or the hook fails with a clear error message
+    Then the hook provides a meaningful response about the empty name
