@@ -1,0 +1,69 @@
+@startuml Flow_Execution
+title Execution Flow - post_gen_project.py (Enhanced)
+
+start
+
+:main();
+
+:is_inside_git_repo();
+note right
+  Traverse parent directories
+  looking for .git
+end note
+
+if (inside existing git repo?) then (yes)
+    #LightGreen:SKIP Git Repository Creation;
+    note right
+      Skip:
+      - gh repo create
+      - git init
+      - git remote add
+      - git branch -M main
+    end note
+else (no)
+    #LightBlue:Create New Repository;
+    :gh repo create {directory_name} --private;
+    :git init;
+    :git remote add origin ...;
+    :git branch -M main;
+endif
+
+partition "Environment Setup (Always)" {
+    :pipenv install --dev;
+    :pipenv run forceTypingExtensions;
+    :pipenv run tests;
+    :pipenv run install_pre_hooks;
+}
+
+partition "Commit Changes (Always)" {
+    :git add --all;
+    :git commit -m "feat: add Python source scaffolding";
+}
+
+if (inside existing git repo?) then (yes)
+    #LightGreen:SKIP Push to Remote;
+else (no)
+    #LightBlue:Push to Remote;
+    :git push -u origin main;
+endif
+
+partition "IDE Control" {
+    switch (open_ide parameter?)
+    case ( none )
+        #LightGray:Skip IDE;
+    case ( vscode )
+        :code <directory>;
+    case ( pycharm )
+        if (platform?) then (macOS)
+            :open -a "PyCharm" <directory>;
+        else (other)
+            :pycharm <directory>;
+        endif
+    endswitch
+}
+
+:Print completion message;
+
+stop
+
+@enduml

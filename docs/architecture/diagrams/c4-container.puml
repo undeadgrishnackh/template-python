@@ -1,0 +1,33 @@
+@startuml C4_Container
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+title Container Diagram - Python Cookiecutter Template
+
+Person(user, "User", "Developer, Agent, or Platform Engineer")
+
+System_Boundary(cookiecutter_sys, "Python Cookiecutter Template") {
+    Container(config, "cookiecutter.json", "JSON", "Template configuration and parameters:\n- kata_name\n- directory_name\n- open_ide")
+
+    Container(pre_hook, "pre_gen_project.py", "Python", "Input validation:\n- Validate kata_name format\n- Ensure module-safe naming")
+
+    Container(template, "Template Files", "Jinja2", "Project scaffold:\n- Pipfile\n- .pre-commit-config.yaml\n- modules/\n- tests/")
+
+    Container(post_hook, "post_gen_project.py", "Python", "Post-generation automation:\n- Git detection\n- Environment setup\n- Git operations\n- IDE launch")
+}
+
+System_Ext(github, "GitHub", "gh CLI")
+System_Ext(git, "Git", "git CLI")
+System_Ext(pipenv, "Pipenv", "pipenv CLI")
+System_Ext(ide, "IDE", "code/pycharm CLI")
+
+Rel(user, config, "Provides parameters")
+Rel(config, pre_hook, "Triggers validation")
+Rel(pre_hook, template, "On success, expands")
+Rel(template, post_hook, "On complete, executes")
+
+Rel(post_hook, pipenv, "Installs dependencies")
+Rel(post_hook, git, "Init/commit/push")
+Rel(post_hook, github, "Creates repository")
+Rel(post_hook, ide, "Opens project")
+
+@enduml

@@ -1,0 +1,26 @@
+@startuml C4_Context
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+title System Context Diagram - Python Cookiecutter Template
+
+Person(developer, "Developer", "Solo developer starting kata or project")
+Person(agent, "5D-Wave Agent", "Automated AI agent in DESIGN wave")
+Person(platform_eng, "Platform Engineer", "Engineer adding service to monorepo")
+
+System(cookiecutter, "Python Cookiecutter Template", "Scaffolds Python projects with quality gates, git integration, and IDE support")
+
+System_Ext(github, "GitHub", "Repository hosting and gh CLI")
+System_Ext(ide, "IDE", "VS Code or PyCharm")
+System_Ext(git, "Git", "Version control system")
+System_Ext(pipenv, "Pipenv", "Python dependency management")
+
+Rel(developer, cookiecutter, "Uses", "Interactive CLI")
+Rel(agent, cookiecutter, "Invokes", "Automated CLI with parameters")
+Rel(platform_eng, cookiecutter, "Uses", "CLI with directory_name override")
+
+Rel(cookiecutter, github, "Creates repo via", "gh CLI")
+Rel(cookiecutter, git, "Initializes/commits via", "git CLI")
+Rel(cookiecutter, pipenv, "Installs dependencies via", "pipenv CLI")
+Rel(cookiecutter, ide, "Opens project in", "code/pycharm CLI")
+
+@enduml

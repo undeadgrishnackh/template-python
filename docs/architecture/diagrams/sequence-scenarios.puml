@@ -1,0 +1,95 @@
+@startuml Sequence_Scenarios
+title Execution Scenarios - Python Cookiecutter Template Enhancement
+
+actor "5D-Wave Agent" as agent
+actor "Developer" as dev
+participant "cookiecutter" as cc
+participant "post_gen_project.py" as hook
+participant "is_inside_git_repo()" as detect
+participant "Git" as git
+participant "GitHub" as gh
+participant "pipenv" as pip
+participant "IDE" as ide
+
+== Scenario 1: Agent Inside Existing Repository ==
+
+agent -> cc: cookiecutter directory_name=source
+cc -> hook: execute post-generation
+hook -> detect: check for .git
+detect -> detect: traverse /my-trading-bot/
+detect --> hook: True (found .git)
+hook -> pip: pipenv install --dev
+pip --> hook: OK
+hook -> pip: forceTypingExtensions
+pip --> hook: OK
+hook -> pip: pipenv run tests
+pip --> hook: OK
+hook -> pip: install_pre_hooks
+pip --> hook: OK
+note over hook: SKIP: gh repo create\nSKIP: git init\nSKIP: git remote add
+hook -> git: git add --all
+git --> hook: OK
+hook -> git: git commit -m "feat: add..."
+git --> hook: OK
+note over hook: SKIP: git push
+note over hook: open_ide=none (default)
+hook --> agent: Success (no IDE opened)
+
+== Scenario 2: Developer in Clean Directory ==
+
+dev -> cc: cookiecutter open_ide=vscode
+cc -> hook: execute post-generation
+hook -> detect: check for .git
+detect -> detect: traverse /Users/dev/katas/
+detect --> hook: False (no .git found)
+hook -> pip: pipenv install --dev
+pip --> hook: OK
+hook -> pip: forceTypingExtensions
+pip --> hook: OK
+hook -> pip: pipenv run tests
+pip --> hook: OK
+hook -> gh: gh repo create {name} --private
+gh --> hook: Created
+hook -> git: git init
+git --> hook: OK
+hook -> git: git remote add origin ...
+git --> hook: OK
+hook -> git: git branch -M main
+git --> hook: OK
+hook -> pip: install_pre_hooks
+pip --> hook: OK
+hook -> git: git add --all
+git --> hook: OK
+hook -> git: git commit -m "feat: jumpstart..."
+git --> hook: OK
+hook -> git: git push -u origin main
+git --> hook: OK
+hook -> ide: code <directory>
+ide --> hook: VS Code opened
+hook --> dev: Success
+
+== Scenario 3: Platform Engineer in Monorepo ==
+
+dev -> cc: cookiecutter directory_name=trading-engine
+cc -> hook: execute post-generation
+hook -> detect: check for .git
+detect -> detect: traverse /enterprise-platform/services/
+detect -> detect: found .git at /enterprise-platform/
+detect --> hook: True
+hook -> pip: pipenv install --dev
+pip --> hook: OK
+hook -> pip: forceTypingExtensions
+pip --> hook: OK
+hook -> pip: pipenv run tests
+pip --> hook: OK
+hook -> pip: install_pre_hooks
+pip --> hook: OK
+note over hook: SKIP: git operations
+hook -> git: git add --all
+git --> hook: OK
+hook -> git: git commit -m "feat: add..."
+git --> hook: OK
+note over hook: open_ide=none (default)
+hook --> dev: Success
+
+@enduml

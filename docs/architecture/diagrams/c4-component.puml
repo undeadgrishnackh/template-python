@@ -1,0 +1,38 @@
+@startuml C4_Component
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title Component Diagram - post_gen_project.py (Enhanced)
+
+Container_Boundary(post_hook, "post_gen_project.py") {
+
+    Component(main, "main()", "Function", "Orchestrates execution flow based on context detection")
+
+    Component(git_detect, "is_inside_git_repo()", "Function", "Traverses parent directories for .git\nReturns: bool")
+
+    Component(env_setup, "setup_development_environment()", "Function", "pipenv install --dev\nforceTypingExtensions\npipenv run tests\ninstall_pre_hooks")
+
+    Component(git_init, "initialize_git_repository()", "Function", "gh repo create\ngit init\ngit remote add\ngit branch -M main")
+
+    Component(commit, "commit_changes(message)", "Function", "git add --all\ngit commit -m message")
+
+    Component(push, "push_to_remote()", "Function", "git push -u origin main")
+
+    Component(ide_open, "open_ide(ide_choice)", "Function", "none: skip\nvscode: code .\npycharm: platform-aware")
+
+    Component(run_cmd, "run_command(cmd)", "Function", "Subprocess wrapper with\ntimeout and error handling")
+}
+
+Rel(main, git_detect, "1. Checks context")
+Rel(main, env_setup, "2. Always runs")
+Rel(main, git_init, "3. If NOT in git repo")
+Rel(main, commit, "4. Always runs")
+Rel(main, push, "5. If NOT in git repo")
+Rel(main, ide_open, "6. Based on parameter")
+
+Rel(env_setup, run_cmd, "Uses")
+Rel(git_init, run_cmd, "Uses")
+Rel(commit, run_cmd, "Uses")
+Rel(push, run_cmd, "Uses")
+Rel(ide_open, run_cmd, "Uses (non-fatal)")
+
+@enduml

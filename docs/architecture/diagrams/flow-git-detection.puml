@@ -1,0 +1,39 @@
+@startuml Flow_Git_Detection
+title Git Detection Algorithm - is_inside_git_repo()
+
+start
+
+:current = Path.cwd();
+note right
+  Start from current
+  working directory
+end note
+
+repeat
+    :git_path = current / ".git";
+
+    if (git_path.exists()?) then (yes)
+        #LightGreen:return True;
+        note right
+          Found .git!
+          (works for both
+          directory and file)
+        end note
+        stop
+    else (no)
+        :current = current.parent;
+    endif
+
+    if (current == current.parent?) then (yes)
+        note right
+          Reached filesystem root
+          (e.g., / on Unix)
+        end note
+        #LightCoral:return False;
+        stop
+    else (no)
+    endif
+
+repeat while (more parents to check?)
+
+@enduml
