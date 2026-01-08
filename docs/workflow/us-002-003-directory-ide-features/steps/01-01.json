@@ -1,0 +1,69 @@
+{
+  "task_id": "01-01",
+  "phase": 1,
+  "phase_name": "US-002: Configurable Directory Name",
+  "name": "acceptance_test_explicit_directory_name",
+  "description": "Create acceptance test for explicit directory name scenario. This test validates that when directory_name is explicitly provided, the template creates that exact directory without dated prefix.",
+  "motivation": "Outside-In TDD starts with acceptance tests. Maria needs to create /enterprise-platform/services/trading-engine/ without 20260108_ prefix.",
+  "estimated_hours": 0.5,
+  "dependencies": [],
+  "files_to_modify": [
+    {
+      "path": "tests/acceptance/step_defs/test_us002_directory_name_configuration_steps.py",
+      "action": "create_or_modify"
+    },
+    {
+      "path": "tests/acceptance/step_defs/conftest.py",
+      "action": "create_or_modify",
+      "note": "May need to create if not exists, or extend existing fixture if present"
+    }
+  ],
+  "implementation_details": "Create pytest-bdd step definitions for the first happy-path scenario ONLY (Explicit directory name skips kata name prompt):\n\n1. FEATURE FILE REFERENCE:\n   - File: tests/acceptance/features/US002_directory_name_configuration.feature\n   - Scenario: \"Explicit directory name skips kata name prompt\" (lines 13-19, @happy-path @explicit-name)\n   - This is the FIRST scenario to implement - focus narrowly on this only\n\n2. PATTERN: Follow test_git_detection_steps.py structure:\n   - Use pytest-bdd scenarios() to load feature file\n   - Create test_context fixture for state isolation (temp_dir, created_dirs, hook_output, etc.)\n   - Follow @given/@when/@then decorator pattern\n\n3. TEST SETUP:\n   - Create conftest.py if needed with test_context fixture supporting:\n     * temp_dir: isolated temp directory\n     * working_dir: current working directory backup\n     * created_directories: list of directories created during test\n     * cookiecutter_invocation: record of how cookiecutter was called\n   - Use tmp_path fixture for isolated test environment\n\n4. SCENARIO-SPECIFIC STEPS:\n   Given: \"Maria is in a platform services directory\"\n   - Create temp directory structure simulating /enterprise-platform/services/\n   - Change to that directory\n   \n   When: \"Maria runs the cookiecutter with directory name \\\"trading-engine\\\"\"\n   - Invoke cookiecutter API or subprocess with directory_name parameter OVERRIDE\n   - Key: directory_name must be passed explicitly to override cookiecutter.json default\n   - Capture hook output and directory creation results\n   \n   Then: \"the hook creates a directory named exactly \\\"trading-engine\\\"\"\n   - Assert directory 'trading-engine' exists in working directory\n   - Assert NO date-prefixed variant exists (no YYYYMMDD_trading-engine)\n   - Assert directory created without date prefix - CRITICAL TEST\n   \n   Additional Then steps from feature file:\n   - \"the directory structure matches project conventions\" - verify subdirs (tests/, src/, etc.)\n   - \"no date prefix is added to the directory name\" - explicit regex check: assert not matches(r'^\\d{8}_')\n\n5. IMPLEMENTATION APPROACH:\n   - Use cookiecutter.main() API from cookiecutter library (NOT subprocess yet)\n   - Construct context dict with directory_name='trading-engine'\n   - Capture result and verify created directory name\n   - DO NOT implement Maria prompting logic yet (that's next task)\n   - DO NOT implement date-prefix stripping logic yet (that's implementation phase)\n\n6. EXPECTED FAILURE MODE:\n   - Test will FAIL at 'Then' step assertion\n   - Reason: cookiecutter.json still has default date prefix logic (line 3)\n   - Expected error: AssertionError - directory 'trading-engine' not found (only 'YYYYMMDD_trading-engine' exists)\n   - This failure signals what needs to be implemented in post_gen_project.py hook",
+  "acceptance_criteria": [
+    "File test_us002_directory_name_configuration_steps.py created with all step definitions for explicit-name scenario",
+    "Step definitions follow pytest-bdd pattern from test_git_detection_steps.py",
+    "Test fixture test_context established with required state isolation keys",
+    "Test runs and FAILS at Then step with assertion about directory name (RED phase)",
+    "Failure indicates: expected directory 'trading-engine' exists but only date-prefixed variant found",
+    "All step definitions are self-contained and can run in isolation",
+    "Feature file scenario 'Explicit directory name skips kata name prompt' is fully implemented with steps"
+  ],
+  "test_command": "cd /Users/michele.brissoni/ProgettiGit/UndeadGrishnackh/_template_Python_ && pipenv run pytest tests/acceptance/step_defs/test_us002_directory_name_configuration_steps.py::test_explicit_directory_name_skips_kata_name_prompt -v --tb=short 2>&1 | head -50",
+  "expected_outcome": "Test execution reaches Then assertion phase and FAILS with message:\n'AssertionError: Expected directory named \"trading-engine\" but found only \"20260108_trading-engine\" (or similar date-prefixed variant). This indicates the feature has not yet been implemented in the post_gen_project.py hook.'",
+  "context": {
+    "project_id": "us-002-003-directory-ide-features",
+    "methodology": "outside_in_tdd",
+    "feature_file": "tests/acceptance/features/US002_directory_name_configuration.feature",
+    "related_user_story": "US-002",
+    "scenario_reference": "lines 13-19, Scenario: 'Explicit directory name skips kata name prompt'",
+    "prerequisite_understanding": "Must understand cookiecutter.json line 3 default behavior (adds date prefix) and that this task creates test to verify override behavior",
+    "next_task": "01-02 will implement post_gen_project.py hook to make this test pass by stripping date prefix when directory_name is explicit"
+  },
+  "state": {
+    "status": "pending",
+    "ready_for_execution": true
+  },
+  "reviews": [
+    {
+      "review_date": "2026-01-08",
+      "reviewer": "software-crafter-reviewer",
+      "status": "APPROVED_WITH_CLARIFICATIONS",
+      "findings": {
+        "implementation_details": "ISSUE: Was too vague about which scenarios to implement. FIXED: Narrowed to single scenario (lines 13-19) with explicit step definitions and expected failure mode",
+        "context_for_subagent": "ISSUE: Missing conftest.py reference and fixture details. FIXED: Added fixture structure and test_context keys needed for state isolation",
+        "test_command": "ISSUE: Referenced non-existent file and unclear failure expectation. FIXED: Added expected failure output description - directory name assertion failure",
+        "acceptance_criteria": "ISSUE: Ambiguous 'compile without errors' criterion. FIXED: Added specific scenario reference, fixture requirement, and explicit assertion about date-prefix detection"
+      },
+      "clarifications_made": [
+        "Explicitly scoped to single scenario (explicit-name) - 10 other scenarios are separate tasks",
+        "Added conftest.py requirement and test_context fixture structure",
+        "Clarified cookiecutter invocation approach (API vs subprocess)",
+        "Specified expected failure: AssertionError when directory_name doesn't skip date prefix",
+        "Added prerequisite understanding: current cookiecutter.json adds date prefix by default",
+        "Linked to next task: 01-02 will implement hook to make this test pass"
+      ],
+      "issue_severity": "MEDIUM - Implementation was executable but would create ambiguity for sub-agent about scope and expected outcomes",
+      "ready_for_execution_verdict": true
+    }
+  ]
+}

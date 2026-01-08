@@ -1,0 +1,104 @@
+{
+  "task_id": "03-01",
+  "phase": 3,
+  "phase_name": "Integration Verification and Documentation",
+  "name": "integration_test_combined_features",
+  "description": "Test US-002 and US-003 working together. Platform engineer Maria uses clean directory name AND VS Code opening for best experience.",
+  "motivation": "Features should compose well. Maria wants both clean directory name (trading-engine) and VS Code auto-open for productivity.",
+  "estimated_hours": 0.5,
+  "dependencies": ["02-07"],
+  "files_to_modify": [
+    {
+      "path": "tests/acceptance/steps/test_integration_us002_us003.py",
+      "action": "create",
+      "description": "New integration test combining US-002 (directory naming) and US-003 (IDE control) features"
+    }
+  ],
+  "implementation_details": "Create integration test in tests/acceptance/steps/test_integration_us002_us003.py that combines directory naming (US-002) and IDE control (US-003) features:\n\n1. Reuse existing step definitions from:\n   - test_US002_directory_name_steps.py: maria_provides_directory_name(), developer_generates_scaffold()\n   - test_US003_ide_control_steps.py: maria_wants_vscode(), developer_with_ide_option()\n\n2. Create new integration-specific steps:\n   @pytest.mark.integration\n   @pytest.mark.US_002\n   @pytest.mark.US_003\n   def test_combined_directory_name_and_ide_control(test_env, hook_service):\n     # Scenario: Maria provides clean directory name AND requests VS Code\n     test_env.directory_name = \"trading-engine\"\n     test_env.ide_option = \"vscode\"\n     test_env.has_vscode = True\n     \n     # Execute combined scaffold generation\n     result = generate_scaffold(test_env, hook_service)\n     \n     # Assert directory created without date prefix\n     assert result.generated_directory.name == \"trading-engine\"\n     assert not result.generated_directory.name[0].isdigit()\n     \n     # Assert VS Code command receives correct path\n     assert \"open_ide:vscode\" in result.commands_executed\n     \n     # Assert both integration signals work (skipped gh commands, local git)\n     assert \"gh repo create\" in result.commands_skipped\n     assert \"git init\" in result.commands_executed or test_env.has_git\n     assert \"pipenv install --dev\" in result.commands_executed\n\n3. Test composition behavior - verify no interference:\n   - Directory name doesn't affect IDE option validation\n   - IDE opening doesn't affect directory naming\n   - Integration mode triggered by directory_name still works\n   - VS Code path uses exact directory_name (no date prefix)\n\n4. Verify state persistence:\n   - test_env carries all context through steps\n   - No cross-test contamination from US-002 or US-003 tests",
+  "acceptance_criteria": [
+    "Integration test passes with both US-002 and US-003 features active",
+    "Directory created with exact name \"trading-engine\" (no date prefix)",
+    "VS Code invoked with correct directory path matching directory_name",
+    "Integration mode signals preserved (gh repo create skipped)",
+    "No interference between directory naming and IDE control",
+    "All commands_executed and commands_skipped assertions pass",
+    "Test uses @pytest.mark.integration for targeted execution"
+  ],
+  "test_command": "cd /Users/michele.brissoni/ProgettiGit/UndeadGrishnackh/_template_Python_ && pipenv run pytest tests/acceptance/steps/test_integration_us002_us003.py -v -m integration --tb=short",
+  "expected_outcome": "All integration test assertions pass. Scaffold created in 'trading-engine' directory with VS Code opening that directory. Exit code 0.",
+  "context": {
+    "project_id": "us-002-003-directory-ide-features",
+    "methodology": "outside_in_tdd",
+    "related_user_story": "US-002, US-003",
+    "test_structure": "pytest-bdd style using @given/@when/@then decorators and markers",
+    "dependent_tests": ["test_US002_directory_name_steps.py", "test_US003_ide_control_steps.py"],
+    "test_isolation": "Uses TestEnvironment fixture with fresh state per test"
+  },
+  "reviews": {
+    "completion_date": "2026-01-08",
+    "reviewer": "software-crafter-reviewer",
+    "focus_areas_reviewed": [
+      "implementation_details_completeness",
+      "acceptance_criteria_clarity",
+      "dependency_specification",
+      "test_command_precision",
+      "sub_agent_context_sufficiency"
+    ],
+    "issues_found": [
+      {
+        "category": "implementation_details_incomplete",
+        "severity": "high",
+        "issue": "Original details lacked pytest-bdd structure. Did not specify which existing step definitions to reuse or how to combine them.",
+        "resolution": "Updated to specify reuse from test_US002_directory_name_steps.py and test_US003_ide_control_steps.py with concrete test function structure",
+        "fixed": true
+      },
+      {
+        "category": "acceptance_criteria_vague",
+        "severity": "high",
+        "issue": "Criterion 'Features compose without conflict' is unmeasurable. Needed specific assertions.",
+        "resolution": "Replaced with testable criteria: assertions on directory creation, VS Code invocation, integration mode signals, command lists",
+        "fixed": true
+      },
+      {
+        "category": "test_command_overly_broad",
+        "severity": "medium",
+        "issue": "Original '-k integration' would match any test with 'integration' in name",
+        "resolution": "Changed to specific file path 'tests/acceptance/steps/test_integration_us002_us003.py' with '-m integration' marker",
+        "fixed": true
+      },
+      {
+        "category": "wrong_file_path",
+        "severity": "high",
+        "issue": "Referenced 'test_integration_steps.py' in step_defs/ but actual tests structure uses 'steps/' directory",
+        "resolution": "Updated files_to_modify to correct path: tests/acceptance/steps/test_integration_us002_us003.py",
+        "fixed": true
+      },
+      {
+        "category": "insufficient_context",
+        "severity": "high",
+        "issue": "Sub-agent would not know how to combine two feature test patterns or what state assertions to use",
+        "resolution": "Added detailed step function template, explicit test fixture usage (test_env, hook_service), and concrete assert statements",
+        "fixed": true
+      },
+      {
+        "category": "missing_dependency_context",
+        "severity": "medium",
+        "issue": "Dependency on '02-07' mentioned but no context on what state it provides",
+        "resolution": "Added context section documenting test structure, dependent tests, and test_env fixture usage pattern",
+        "fixed": true
+      }
+    ],
+    "quality_assessment": {
+      "implementation_details": "NOW COMPLETE - Provides concrete template, step reuse guidance, and specific assert statements",
+      "acceptance_criteria": "NOW TESTABLE - All criteria are measurable and map to assert statements",
+      "dependencies": "NOW CLEAR - Files and fixtures documented",
+      "test_command": "NOW PRECISE - Targets specific file and integration marker",
+      "sub_agent_readiness": "NOW SUFFICIENT - Contains code template, fixture guidance, and assertion patterns"
+    },
+    "summary": "Step 03-01 was under-specified for independent execution. All critical gaps have been addressed. Implementation details now include pytest-bdd structure, step reuse patterns, and concrete test template. Acceptance criteria are measurable. File paths corrected. Test command precision improved. Sub-agent has sufficient context to implement without clarification."
+  },
+  "state": {
+    "status": "pending",
+    "ready_for_execution": true
+  }
+}

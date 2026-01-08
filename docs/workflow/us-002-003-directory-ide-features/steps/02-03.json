@@ -1,0 +1,109 @@
+{
+  "task_id": "02-03",
+  "phase": 2,
+  "phase_name": "US-003: IDE Opening Control",
+  "name": "acceptance_test_ide_failure_non_fatal",
+  "description": "Create acceptance test verifying IDE failures are non-fatal. When VS Code CLI is not installed, generation must complete with warning.",
+  "motivation": "Kim's machine lacks VS Code CLI. Generation must succeed regardless. IDE launch is convenience, not requirement for scaffold creation.",
+  "estimated_hours": 0.5,
+  "dependencies": ["02-02"],
+  "files_to_modify": [
+    {
+      "path": "tests/acceptance/steps/test_US003_ide_control_steps.py",
+      "action": "verify_present"
+    }
+  ],
+  "implementation_details": "Verify step definitions for non-fatal failure scenario are present and working:\n\n1. Given steps (already implemented):\n   - \"a developer requests VS Code opening\" (line 85-90)\n   - \"the VS Code CLI is not installed or not in PATH\" (line 93-97)\n\n2. When step (already implemented):\n   - \"the developer generates a scaffold with IDE option {option}\" (line 332-373)\n   - Handles IDE unavailability by adding warning to test_env.result.warnings\n   - Sets exit_code=0 regardless of IDE availability\n\n3. Then steps (already implemented):\n   - \"the hook prints a warning about VS Code not being found\" (line 516-521)\n     Verifies warning in test_env.result.warnings\n   - \"the scaffold generation completes successfully\" (line 524-527)\n     Verifies test_env.result.success is True\n   - \"the exit code is zero indicating success\" (line 530-533)\n     Verifies test_env.result.exit_code == 0\n   - \"all other operations completed normally\" (line 536-541)\n     Verifies pipenv install and pre-commit install executed\n\nTest scenario execution flow:\n1. Developer context set with IDE option 'vscode'\n2. VS Code CLI marked unavailable (test_env.has_vscode = False)\n3. developer_with_ide_option() executes:\n   - Validates IDE option (valid)\n   - Checks availability (returns False, adds warning)\n   - Creates ScaffoldResult with success=True, exit_code=0, warnings=['VS Code... not found']\n4. Assertions verify all four conditions pass",
+  "acceptance_criteria": [
+    "Scenario 'VS Code command not found is non-fatal' from feature file is covered by existing step definitions",
+    "Test verifies warning message presence in test_env.result.warnings",
+    "Test confirms exit code 0 (success) - non-fatal handling validated",
+    "Test confirms scaffold generation completes despite missing IDE (all other operations completed)",
+    "Existing step definitions align with feature file scenario expectations"
+  ],
+  "test_command": "cd /Users/michele.brissoni/ProgettiGit/UndeadGrishnackh/_template_Python_ && pipenv run pytest tests/acceptance/steps/test_US003_ide_control_steps.py -v -k 'vscode_not_in_path or developer_requests_vscode' --tb=short",
+  "expected_outcome": "Test passes in Red phase - step definitions already exist and implement non-fatal IDE failure handling",
+  "context": {
+    "project_id": "us-002-003-directory-ide-features",
+    "methodology": "outside_in_tdd",
+    "feature_file": "tests/acceptance/features/US003_ide_opening_control.feature",
+    "related_user_story": "US-003"
+  },
+  "reviews": [
+    {
+      "review_id": "review_02-03_20250108",
+      "reviewer": "software-crafter-reviewer",
+      "timestamp": "2025-01-08T00:00:00Z",
+      "findings": {
+        "critical_issues": [
+          {
+            "issue": "Incorrect file path in files_to_modify",
+            "severity": "critical",
+            "description": "Referenced path 'tests/acceptance/step_defs/test_us003_ide_opening_control_steps.py' does not exist. Actual path is 'tests/acceptance/steps/test_US003_ide_control_steps.py' (different directory structure and file naming convention)",
+            "location": "files_to_modify[0].path",
+            "corrected_to": "tests/acceptance/steps/test_US003_ide_control_steps.py"
+          },
+          {
+            "issue": "Misaligned task scope - implementation already complete",
+            "severity": "critical",
+            "description": "Step definitions for non-fatal IDE failure scenario are ALREADY IMPLEMENTED in existing test file. The step definitions exist at:\n- Given: 'a developer requests VS Code opening' (line 85-90)\n- Given: 'the VS Code CLI is not installed or not in PATH' (line 93-97)\n- When: 'the developer generates a scaffold with IDE option' (line 332-373)\n- Then: All four assertion steps (lines 516-541)\nTask should verify existing implementation, not create new steps.",
+            "location": "implementation_details and action",
+            "corrected_to": "Changed action from 'modify' to 'verify_present' and updated implementation_details to describe verification instead of creation"
+          }
+        ],
+        "high_issues": [
+          {
+            "issue": "Test command references non-existent file",
+            "severity": "high",
+            "description": "Test command uses incorrect path 'tests/acceptance/step_defs/test_us003_ide_opening_control_steps.py' which does not exist",
+            "location": "test_command",
+            "corrected_to": "Updated to use correct path: 'tests/acceptance/steps/test_US003_ide_control_steps.py'"
+          },
+          {
+            "issue": "Vague expected_outcome",
+            "severity": "high",
+            "description": "'Test fails in Red phase' is misleading since steps already exist. Tests would execute to verify behavior, not fail due to missing implementation.",
+            "location": "expected_outcome",
+            "corrected_to": "Updated to: 'Test passes in Red phase - step definitions already exist and implement non-fatal IDE failure handling'"
+          }
+        ],
+        "medium_issues": [
+          {
+            "issue": "Implementation details lack specificity about existing code",
+            "severity": "medium",
+            "description": "Implementation_details section references mock implementations but doesn't indicate that the HookService test double already handles IDE availability checking via shutil.which() and warning generation. Doesn't reference actual code lines in existing test file.",
+            "location": "implementation_details",
+            "corrected_to": "Enhanced with specific line numbers, code flow, and verification that non-fatal handling is already implemented in developer_with_ide_option() method"
+          },
+          {
+            "issue": "Acceptance criteria partially misaligned with implementation",
+            "severity": "medium",
+            "description": "AC states 'Test covers Scenario' but doesn't explicitly verify all assertion steps. Added explicit reference to 'all other operations completed normally' which is verified at line 536-541.",
+            "location": "acceptance_criteria",
+            "corrected_to": "Enhanced criteria to be more explicit about scaffold completion and operation verification"
+          }
+        ],
+        "completeness_assessment": {
+          "is_self_contained": true,
+          "has_sufficient_context": true,
+          "dependencies_correct": true,
+          "assessment": "Task context is now complete and self-contained. Dependency on 02-02 is correct (VS Code opening feature must be tested before non-fatal failure). All acceptance criteria can be verified by examining existing test step definitions."
+        }
+      },
+      "recommendations": {
+        "action_required": "Update file paths and correct task scope to verify existing implementation rather than create new steps",
+        "ready_for_execution": true,
+        "notes": [
+          "This is a verification task, not a creation task",
+          "Test command will pass because step definitions already exist",
+          "Consider this task as validation that feature implementation is complete",
+          "The feature file and step definitions are properly aligned"
+        ]
+      }
+    }
+  ],
+  "state": {
+    "status": "pending",
+    "ready_for_execution": true
+  }
+}

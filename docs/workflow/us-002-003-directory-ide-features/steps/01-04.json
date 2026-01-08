@@ -1,0 +1,119 @@
+{
+  "task_id": "01-04",
+  "phase": 1,
+  "phase_name": "US-002: Configurable Directory Name",
+  "name": "verify_us002_acceptance_tests_pass",
+  "description": "Run all US-002 acceptance tests to verify the implementation. Both explicit directory name and default dated prefix scenarios must pass, confirming feature works and backwards compatibility preserved.",
+  "motivation": "Outside-In TDD cycle completion: Red (wrote failing tests) -> Green (implement). All acceptance tests passing confirms US-002 requirements met.",
+  "estimated_hours": 0.5,
+  "dependencies": ["01-03"],
+  "files_to_modify": [],
+  "implementation_details": "Execute the full acceptance test suite for US-002:\n\n1. Run explicit directory name scenario:\n   - cookiecutter use_dated_prefix=no kata_name=trading-engine\n   - Assert creates trading-engine/ (no date prefix)\n\n2. Run default dated prefix scenario:\n   - cookiecutter (defaults) kata_name=fizzbuzz\n   - Assert creates 20260108_fizzbuzz/ (dated prefix)\n\n3. Run 5D-Wave source directory scenario:\n   - cookiecutter use_dated_prefix=no kata_name=source\n   - Assert creates source/ directory",
+  "acceptance_criteria": [
+    "All US-002 BDD scenarios pass",
+    "No regressions in existing functionality",
+    "Test output shows Green state"
+  ],
+  "test_command": "cd /Users/michele.brissoni/ProgettiGit/UndeadGrishnackh/_template_Python_ && pipenv run pytest tests/acceptance/ -v -k 'US-002 or US002 or directory' --tb=short",
+  "expected_outcome": "All US-002 acceptance tests pass (Green phase)",
+  "context": {
+    "project_id": "us-002-003-directory-ide-features",
+    "methodology": "outside_in_tdd",
+    "related_user_story": "US-002"
+  },
+  "state": {
+    "status": "blocked",
+    "ready_for_execution": false
+  },
+  "reviews": {
+    "reviewer": "software-crafter-reviewer",
+    "review_date": "2026-01-08",
+    "iteration": 1,
+    "findings": {
+      "critical_issues": [
+        {
+          "issue_id": "MISSING-STEP-DEFINITION",
+          "severity": "critical",
+          "category": "implementation_completeness",
+          "description": "Step definition not found: 'Given the cookiecutter template is available'",
+          "impact": "All 11 US-002 scenarios fail immediately - step is missing from conftest.py or test_US002_directory_name_steps.py",
+          "location": "tests/acceptance/features/US002_directory_name_configuration.feature:8",
+          "evidence": "StepDefinitionNotFoundError during test execution",
+          "remediation": "Add @given('the cookiecutter template is available') step definition to test_US002_directory_name_steps.py or conftest.py. This step should initialize the test environment with cookiecutter available."
+        }
+      ],
+      "high_issues": [
+        {
+          "issue_id": "INCOMPLETE-ACCEPTANCE_CRITERIA",
+          "severity": "high",
+          "category": "acceptance_criteria_coverage",
+          "description": "Task AC do not fully specify implementation readiness",
+          "impact": "Cannot determine if tests are all passing without execution",
+          "details": "AC #1 'All US-002 BDD scenarios pass' is vague - does not specify the count of scenarios or which ones",
+          "remediation": "Update AC to: 'All 12 US-002 BDD scenarios pass (explicit name, dated prefix, git detection, invalid names, unicode, edge cases)'"
+        },
+        {
+          "issue_id": "MISSING-CONTEXT-DETAILS",
+          "severity": "high",
+          "category": "execution_context",
+          "description": "Implementation details reference outdated command syntax",
+          "impact": "Sub-agent may execute incorrect test scenarios",
+          "details": "Implementation section mentions 'cookiecutter use_dated_prefix=no kata_name=trading-engine' but this is direct CLI syntax, not actual BDD step format",
+          "remediation": "Update implementation_details to reference BDD scenario names from feature file instead of CLI examples. Example: 'Scenario: Explicit directory name skips kata name prompt'"
+        }
+      ],
+      "medium_issues": [
+        {
+          "issue_id": "VAGUE-EXPECTED-OUTCOME",
+          "severity": "medium",
+          "category": "clarity",
+          "description": "Expected outcome lacks specific metrics",
+          "impact": "Unclear what 'Green state' means in test context",
+          "remediation": "Update to: 'All US-002 acceptance tests pass (exit code 0, all 12 scenarios green). No regressions in US-001 or US-003 tests.'"
+        },
+        {
+          "issue_id": "TEST-COMMAND-FILTER-AMBIGUOUS",
+          "severity": "medium",
+          "category": "execution_specificity",
+          "description": "Test filter uses both 'US-002' and 'directory' keywords which capture tests outside US-002 scope",
+          "impact": "May fail tests from US-003 (IDE control) or other tests containing 'directory' keyword",
+          "details": "Current filter: -k 'US-002 or US002 or directory' will match US003_ide_opening_control test which failed",
+          "remediation": "Narrow filter to: -k 'US002 or US-002' to isolate US-002 tests only"
+        }
+      ]
+    },
+    "strengths": [
+      "Test command syntax is correct (pytest, feature file location valid)",
+      "Dependency chain properly specified (depends on 01-03)",
+      "Feature files exist and are properly structured with BDD scenarios",
+      "Step definitions mostly complete (multiple GIVEN/WHEN/THEN steps implemented)",
+      "Test infrastructure in place (conftest.py, HookService doubles, ScaffoldResult)",
+      "Clear motivation tied to TDD red-green-refactor cycle"
+    ],
+    "execution_blockers": [
+      {
+        "blocker": "Missing step definition prevents test collection",
+        "required_action": "Implement @given('the cookiecutter template is available') before execution",
+        "estimated_effort": "5 minutes"
+      }
+    ],
+    "self_contained_assessment": {
+      "sufficient_for_sub_agent": false,
+      "reason": "Critical missing step definition means sub-agent cannot run tests without implementation",
+      "what_is_missing": [
+        "Step definition implementation for 'the cookiecutter template is available'",
+        "Clarification on which 12 scenarios must pass (list them explicitly)",
+        "Precise test filter (current filter captures unintended tests)"
+      ]
+    },
+    "test_command_verification": {
+      "syntax_valid": true,
+      "working_directory_exists": true,
+      "pytest_installed": true,
+      "test_file_exists": true,
+      "current_execution_status": "11 FAILED, 2 PASSED, 29 DESELECTED",
+      "failure_reason": "Missing step definition blocks all US-002 scenarios"
+    },
+    "recommendation": "BLOCK: Do not execute this task until missing step definition is implemented. Update implementation_details section to reference actual BDD scenario names from feature file. Narrow test filter to exclude unrelated tests."
+  }
+}

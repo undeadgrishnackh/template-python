@@ -1,0 +1,88 @@
+{
+  "task_id": "02-06",
+  "phase": 2,
+  "phase_name": "US-003: IDE Opening Control",
+  "name": "integrate_open_ide_in_main",
+  "description": "Add open_ide() call to the main() function as the final step before the 'Scaffolding complete!' message.",
+  "motivation": "IDE should open after all generation is complete, so developer sees the finished project. Placement at end ensures all files exist.",
+  "estimated_hours": 0.25,
+  "dependencies": ["02-05"],
+  "files_to_modify": [
+    {
+      "path": "hooks/post_gen_project.py",
+      "action": "modify"
+    }
+  ],
+  "implementation_details": "Modify main() function to add IDE launch step:\n\nCurrent end of main() (lines 180-186):\n    # Step 6: Push to remote (standalone only)\n    if not inside_git_repo:\n        push_to_remote()\n    else:\n        print(\"Skipping push (inside existing repo - manage push manually)\")\n\n    print(\"Scaffolding complete!\")\n\nNew end of main():\n    # Step 6: Push to remote (standalone only)\n    if not inside_git_repo:\n        push_to_remote()\n    else:\n        print(\"Skipping push (inside existing repo - manage push manually)\")\n\n    # Step 7: Open IDE if requested (always, non-fatal)\n    open_ide(PROJECT_DIRECTORY)\n\n    print(\"Scaffolding complete!\")\n\nExact placement:\n- Insert open_ide(PROJECT_DIRECTORY) call between line 184 (\"Skipping push...\" message) and line 186 (\"Scaffolding complete!\")\n- The call must be AFTER all git operations (line 182: push_to_remote())\n- The call must be BEFORE the final success message (line 186)\n- Use PROJECT_DIRECTORY constant defined at line 7\n- Add a comment explaining Step 7 for clarity\n\nDependency satisfaction:\n- Task 02-05 must be completed first - it defines the open_ide() function\n- This task only adds the function call; function implementation is in 02-05",
+  "acceptance_criteria": [
+    "open_ide(PROJECT_DIRECTORY) call added to main() function",
+    "Call placed after all git operations complete (after push_to_remote check)",
+    "Call placed before final success message (before print(\"Scaffolding complete!\"))",
+    "Uses PROJECT_DIRECTORY constant",
+    "Includes comment explaining Step 7",
+    "Line 186 (print(\"Scaffolding complete!\")) remains as final output"
+  ],
+  "test_command": "cd /Users/michele.brissoni/ProgettiGit/UndeadGrishnackh/_template_Python_ && grep -A 2 -B 2 'Step 7.*Open IDE' hooks/post_gen_project.py | grep -c 'open_ide(PROJECT_DIRECTORY)'",
+  "expected_outcome": "Test returns 1 (exactly one match of open_ide(PROJECT_DIRECTORY) with Step 7 comment context)",
+  "verification_steps": [
+    "Run syntax check: python -m py_compile hooks/post_gen_project.py",
+    "Verify placement: grep -n 'open_ide(PROJECT_DIRECTORY)' hooks/post_gen_project.py shows line before 186 (Scaffolding complete!)",
+    "Verify context: Check that open_ide call is within the main() function, not in any other function"
+  ],
+  "context": {
+    "project_id": "us-002-003-directory-ide-features",
+    "methodology": "outside_in_tdd",
+    "related_user_story": "US-003",
+    "dependent_on_completion": "Task 02-05 must be completed (open_ide function definition)"
+  },
+  "state": {
+    "status": "pending",
+    "ready_for_execution": true
+  },
+  "reviews": [
+    {
+      "reviewer": "software-crafter-reviewer",
+      "review_date": "2026-01-08",
+      "iteration": 1,
+      "findings": {
+        "implementation_details_completeness": "STRONG - Contains exact line numbers, current and new code structure, and specific placement instructions. Sub-agent can execute without ambiguity.",
+        "acceptance_criteria_clarity": "MODERATE - Criteria are testable but could be more specific about line number reference. Updated with exact line number context (line 186).",
+        "dependency_specification": "STRONG - Clearly specifies dependency on 02-05. Added clarification that this task only adds the function call, not the function definition.",
+        "test_command_validity": "IMPROVED - Original command only verified existence. Updated to verify both presence and proper placement with context.",
+        "contextual_sufficiency": "STRONG - File path is absolute, line numbers are exact, function is already defined in current codebase (will be added by 02-05), execution path is clear."
+      },
+      "issues_identified": [
+        {
+          "severity": "LOW",
+          "category": "clarity",
+          "issue": "Test command only checks for presence, not placement correctness",
+          "impact": "Could pass with open_ide call in wrong location",
+          "resolution": "Updated test_command to verify placement with context (Step 7 comment)"
+        },
+        {
+          "severity": "LOW",
+          "category": "completeness",
+          "issue": "Acceptance criteria could reference exact line numbers for precision",
+          "impact": "Sub-agent must manually locate correct position",
+          "resolution": "Added exact line numbers (184, 186) to implementation_details and acceptance_criteria"
+        },
+        {
+          "severity": "INFO",
+          "category": "enhancement",
+          "issue": "Missing verification steps for sub-agent to validate completion",
+          "impact": "No explicit checklist for task completion validation",
+          "resolution": "Added verification_steps section with syntax, placement, and context checks"
+        }
+      ],
+      "strengths": [
+        "Task is atomic and focused - single responsibility",
+        "Dependency chain is explicit (depends on 02-05)",
+        "Implementation details provide before/after code structure",
+        "Uses constants from codebase (PROJECT_DIRECTORY defined at line 7)",
+        "Motivation is clear and business-focused",
+        "Time estimate (0.25 hours) is appropriate for scope"
+      ],
+      "recommendation": "APPROVED - Task is ready for execution. Sub-agent has sufficient context to implement without additional information. Improvements made enhance clarity and verification precision."
+    }
+  ]
+}

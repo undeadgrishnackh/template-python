@@ -1,0 +1,109 @@
+{
+  "task_id": "01-03",
+  "phase": 1,
+  "phase_name": "US-002: Configurable Directory Name",
+  "name": "cookiecutter_json_add_dated_prefix_toggle",
+  "description": "Add use_dated_prefix parameter to cookiecutter.json with conditional Jinja2 logic in directory_name default. This enables clean directory names when use_dated_prefix=no while preserving dated behavior as default.",
+  "motivation": "The cookiecutter.json is the configuration entry point. Adding a toggle parameter allows users to explicitly request clean directory names while keeping dated prefix as the safe default for kata workflows.",
+  "estimated_hours": 0.5,
+  "dependencies": ["01-01", "01-02"],
+  "files_to_modify": [
+    {
+      "path": "cookiecutter.json",
+      "action": "modify"
+    }
+  ],
+  "implementation_details": "Current cookiecutter.json structure:\n{\n  \"kata_name\": \"DummyKata\",\n  \"directory_name\": \"{% now 'local', '%Y%m%d' %}_{{ cookiecutter.kata_name.lower().replace(' ', '_') }}\"\n}\n\nTarget cookiecutter.json structure:\n{\n  \"kata_name\": \"DummyKata\",\n  \"use_dated_prefix\": [\"yes\", \"no\"],\n  \"directory_name\": \"{% if cookiecutter.use_dated_prefix == 'yes' %}{% now 'local', '%Y%m%d' %}_{{ cookiecutter.kata_name.lower().replace(' ', '_') }}{% else %}{{ cookiecutter.kata_name.lower().replace(' ', '_') }}{% endif %}\"\n}\n\nBehavior:\n- use_dated_prefix=yes (default, first in list): Creates 20260108_fizzbuzz\n- use_dated_prefix=no: Creates fizzbuzz (clean name)\n\nUser can also override directory_name directly for full control.",
+  "acceptance_criteria": [
+    "cookiecutter.json parses without errors (JSON syntax valid)",
+    "use_dated_prefix parameter present in cookiecutter.json with list ['yes', 'no']",
+    "Jinja2 template in directory_name renders without syntax errors",
+    "When use_dated_prefix='yes': directory name includes YYYYMMDD_ prefix (e.g., 20260108_fizzbuzz)",
+    "When use_dated_prefix='no': directory name is clean without prefix (e.g., fizzbuzz)",
+    "cookiecutter prompts user for use_dated_prefix with 'yes' as default",
+    "Generated directory follows correct naming pattern based on user choice"
+  ],
+  "validation_command": "cd /Users/michele.brissoni/ProgettiGit/UndeadGrishnackh/_template_Python_ && python -m pytest tests/test_cookiecutter_config.py -v 2>/dev/null || python -c \"import json; import re; data=json.load(open('cookiecutter.json')); assert 'use_dated_prefix' in data; assert data['use_dated_prefix']==['yes','no']; assert '{%' in data['directory_name']; print('OK: JSON structure valid')\"",
+  "expected_outcome": "JSON is syntactically valid, use_dated_prefix parameter present with correct values, Jinja2 template present in directory_name field",
+  "context": {
+    "project_id": "us-002-003-directory-ide-features",
+    "methodology": "outside_in_tdd",
+    "related_user_story": "US-002"
+  },
+  "state": {
+    "status": "pending",
+    "ready_for_execution": true
+  },
+  "reviews": [
+    {
+      "reviewer": "software-crafter-reviewer",
+      "review_date": "2026-01-08",
+      "review_type": "atomic_task_quality_assurance",
+      "findings": {
+        "focus_area_1_implementation_details": {
+          "status": "COMPLETE with minor gap",
+          "verdict": "PASS",
+          "details": "Shows clear before/after JSON structure, explains Jinja2 logic, documents behavior for both parameter values. Gap: Doesn't explain how cookiecutter displays the parameter in interactive prompts.",
+          "severity": "low"
+        },
+        "focus_area_2_acceptance_criteria": {
+          "status": "IMPROVED",
+          "verdict": "PASS",
+          "details": "Enhanced from 4 to 7 criteria. Now includes: JSON syntax validation, parameter presence check, Jinja2 syntax validation, both use_dated_prefix paths tested, prompt behavior verification, end-to-end directory naming verification.",
+          "severity": "none"
+        },
+        "focus_area_3_dependencies": {
+          "status": "CORRECT",
+          "verdict": "PASS",
+          "details": "Dependencies on 01-01 and 01-02 are appropriate prerequisites. No circular dependencies.",
+          "severity": "none"
+        },
+        "focus_area_4_test_command": {
+          "status": "IMPROVED",
+          "verdict": "PASS",
+          "details": "Original command only checked JSON syntax. Updated to include structural assertions: parameter presence, parameter value validation, Jinja2 template presence. Fallback to pytest if test suite exists.",
+          "severity": "critical_fix"
+        },
+        "focus_area_5_execution_context": {
+          "status": "ADEQUATE",
+          "verdict": "PASS",
+          "details": "Sufficient context for sub-agent to execute. Clear target state, specific file to modify, validation method provided. Sub-agent can execute without additional information.",
+          "severity": "none"
+        }
+      },
+      "issues_found": [
+        {
+          "issue_id": 1,
+          "category": "test_validation_incomplete",
+          "severity": "critical",
+          "description": "Original validation_command only checked JSON parsing, not functional correctness (Jinja2 rendering, parameter display)",
+          "location": "validation_command field",
+          "fix_applied": "Enhanced command to validate: JSON structure, parameter presence with correct values, Jinja2 template presence",
+          "status": "FIXED"
+        },
+        {
+          "issue_id": 2,
+          "category": "acceptance_criteria_incomplete",
+          "severity": "high",
+          "description": "Original AC missing explicit verification that parameter appears in cookiecutter prompts and Jinja2 renders correctly",
+          "location": "acceptance_criteria field",
+          "fix_applied": "Expanded from 4 to 7 criteria including Jinja2 syntax validation, both parameter paths, and prompt behavior",
+          "status": "FIXED"
+        }
+      ],
+      "strengths": [
+        "Clear implementation details with before/after JSON examples",
+        "Well-explained Jinja2 logic with concrete examples (20260108_fizzbuzz vs fizzbuzz)",
+        "Proper dependency chain (01-01, 01-02 are prerequisites)",
+        "Good estimated hours (0.5 hours is realistic for single parameter addition)",
+        "Self-contained task - only modifies one file",
+        "Clear motivation explaining the business value"
+      ],
+      "recommendations": [
+        "Consider adding a functional test step that runs: cookiecutter . --no-input --extra-context '{\"kata_name\": \"TestKata\", \"use_dated_prefix\": \"no\"}' to verify end-to-end behavior",
+        "Document that 'yes' is default (first in list) per cookiecutter convention",
+        "If testing gets complex, consider splitting into 01-03 (add parameter) and 01-04 (test behavior) tasks"
+      ]
+    }
+  ]
+}

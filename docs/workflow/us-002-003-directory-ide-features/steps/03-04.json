@@ -1,0 +1,122 @@
+{
+  "task_id": "03-04",
+  "phase": 3,
+  "phase_name": "Integration Verification and Documentation",
+  "name": "create_feature_commit",
+  "description": "Create a single commit with all US-002 and US-003 changes. Follow conventional commit format for clear history.",
+  "motivation": "Clean commit history enables rollback if issues discovered. Conventional commits support automatic changelog generation.",
+  "estimated_hours": 0.25,
+  "dependencies": ["03-03"],
+  "files_to_modify": [
+    {
+      "path": "cookiecutter.json",
+      "action": "verify_modified",
+      "expected_changes": "Added use_dated_prefix and open_ide parameters with defaults"
+    },
+    {
+      "path": "hooks/post_gen_project.py",
+      "action": "verify_modified",
+      "expected_changes": "Added IDE launch logic handling open_ide parameter"
+    },
+    {
+      "path": "README.md",
+      "action": "verify_modified",
+      "expected_changes": "Added parameter documentation and usage examples"
+    }
+  ],
+  "implementation_details": "Step-by-step execution:\n\n1. Verify all required files have been modified in previous steps:\n   - cookiecutter.json: use_dated_prefix and open_ide parameters added\n   - hooks/post_gen_project.py: IDE launch logic implemented\n   - README.md: Parameter documentation and usage examples added\n\n2. Run git add and status check (preview mode):\n   git add -A\n   git status\n\n3. After user confirms changes are correct, execute commit:\n   git commit -m \"feat(template): add configurable directory naming and IDE control\" \\\n     -m \"US-002: Configurable Directory Name\n- Add use_dated_prefix parameter (yes/no)\n- When no, creates clean directory without date prefix\n- Enables monorepo integration use cases\n\nUS-003: IDE Opening Control\n- Add open_ide parameter (none/vscode/pycharm)\n- Default none for safe automation\n- Non-fatal IDE launch failures\n- macOS PyCharm fallback support\n\nCloses #US-002, #US-003\"\n\n4. Verify commit created successfully:\n   git log -1 --oneline",
+  "acceptance_criteria": [
+    "cookiecutter.json includes use_dated_prefix and open_ide parameters with valid defaults",
+    "hooks/post_gen_project.py contains IDE launch logic for all three IDE options",
+    "README.md contains parameter documentation table and usage examples for both features",
+    "git status shows all modified files staged for commit",
+    "Commit message follows conventional format (feat(template): ...)",
+    "Both US-002 and US-003 mentioned in commit body",
+    "Commit created successfully with all changes",
+    "git log shows new commit with correct message"
+  ],
+  "git_command": "cd /Users/michele.brissoni/ProgettiGit/UndeadGrishnackh/_template_Python_ && git add -A && git status",
+  "test_command": "git log -1 --format='%H %s' && git show --name-only HEAD | grep -E '(cookiecutter.json|post_gen_project.py|README.md)'",
+  "expected_outcome": "All US-002 and US-003 changes committed in single commit with clear conventional commit message",
+  "context": {
+    "project_id": "us-002-003-directory-ide-features",
+    "methodology": "outside_in_tdd",
+    "related_user_story": "US-002, US-003",
+    "upstream_artifacts": [
+      "02-01 through 02-07: Feature implementation (US-002 directory naming, US-003 IDE control)",
+      "03-01: Test execution and validation",
+      "03-02: Integration testing",
+      "03-03: README documentation updates"
+    ]
+  },
+  "state": {
+    "status": "pending",
+    "ready_for_execution": false
+  },
+  "notes": "CRITICAL: This is a PREVIEW-ONLY step. DO NOT execute git commit without explicit user confirmation after reviewing staged changes. User must inspect output of 'git status' and 'git diff --cached' before proceeding to actual commit.",
+  "reviews": [
+    {
+      "review_date": "2026-01-08",
+      "reviewer": "software-crafter-reviewer",
+      "findings": {
+        "completeness": "INCOMPLETE - Missing critical details",
+        "issues": [
+          {
+            "severity": "CRITICAL",
+            "category": "Implementation Verification",
+            "issue": "files_to_modify was empty array - no verification of prerequisite changes from steps 03-01 through 03-03",
+            "impact": "Executor cannot verify that dependencies (03-03) have actually been completed before committing",
+            "fix_applied": "Added files_to_modify with expected files and changes from previous steps"
+          },
+          {
+            "severity": "CRITICAL",
+            "category": "Testability",
+            "issue": "No test_command defined to verify commit was created successfully",
+            "impact": "Executor cannot validate whether commit actually succeeded",
+            "fix_applied": "Added test_command to verify git log and commit contents"
+          },
+          {
+            "severity": "HIGH",
+            "category": "Acceptance Criteria",
+            "issue": "AC too vague - does not verify actual file contents or changes",
+            "impact": "Executor cannot independently verify correctness without manual inspection",
+            "fix_applied": "Expanded AC with specific verifiable criteria for each file"
+          },
+          {
+            "severity": "HIGH",
+            "category": "Context",
+            "issue": "No upstream_artifacts documented - unclear what changes from previous steps should be included",
+            "impact": "Executor unsure what actually needs to be staged in commit",
+            "fix_applied": "Added upstream_artifacts section listing all implementation steps (02-01 through 02-07) and verification steps (03-01, 03-02, 03-03)"
+          },
+          {
+            "severity": "MEDIUM",
+            "category": "Execution Clarity",
+            "issue": "git_command only runs 'git status' - does not perform actual commit",
+            "impact": "Confusing when paired with description saying 'Create a single commit'",
+            "fix_applied": "Updated implementation_details to clarify this is 2-phase: preview with git status, then commit after user confirmation"
+          },
+          {
+            "severity": "MEDIUM",
+            "category": "Safety",
+            "issue": "ready_for_execution was true, but critical dependencies (03-03) must be verified first",
+            "impact": "Executor might proceed without ensuring README was actually updated",
+            "fix_applied": "Changed ready_for_execution to false until upstream tasks verified"
+          }
+        ],
+        "strengths": [
+          "Clear motivation for the commit step",
+          "Appropriate task ordering (commit after documentation complete)",
+          "Appropriate safeguard note about requiring user confirmation"
+        ],
+        "recommendations": [
+          "Before execution: Executor MUST run 'git status' and 'git diff --cached' to verify all expected files are present",
+          "Before execution: Executor MUST verify that cookiecutter.json, hooks/post_gen_project.py, and README.md contain expected changes from previous steps",
+          "After commit: Executor MUST run test_command to verify commit was created successfully",
+          "If any files are missing from git status output, escalate to user for clarification - do not proceed with incomplete commit"
+        ]
+      },
+      "summary": "Task file had critical gaps in verification and testability. Added missing acceptance criteria, test command, file verification, and upstream context. Task now provides sufficient detail for executor to independently verify success, but marked as not_ready pending upstream task completion."
+    }
+  ]
+}

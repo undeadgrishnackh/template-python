@@ -1,0 +1,943 @@
+# Roadmap: US-002 Configurable Source Directory Name & US-003 IDE Opening Control
+# Generated: 2026-01-08
+# Agent: solution-architect (Morgan)
+# Methodology: Outside-In TDD with BDD Acceptance Tests
+
+project:
+  id: us-002-003-directory-ide-features
+  name: "Configurable Directory Naming and IDE Control"
+  goal: |
+    Enable platform engineers and 5D-Wave agents to specify clean directory names
+    (without dated prefix) for monorepo integration, and provide parameterized
+    IDE launch control for both automation safety and developer convenience.
+  methodology: outside_in_tdd
+  estimated_duration: "1.5 days"
+  risk_level: LOW
+
+  success_criteria:
+    - "Clean directory names generated when directory_name explicitly provided"
+    - "Dated prefix preserved for default kata workflows"
+    - "open_ide=none by default (automation safe)"
+    - "IDE launch works for vscode and pycharm when requested"
+    - "IDE failures are non-fatal (warnings only)"
+    - "All existing tests continue to pass"
+
+  baseline_reference: docs/workflow/us-002-003-directory-ide-features/baseline.yaml
+  requirements_reference: docs/requirements/user-stories.md
+
+# =============================================================================
+# PHASE 1: US-002 - CONFIGURABLE DIRECTORY NAME
+# =============================================================================
+phases:
+  - phase: 1
+    name: "US-002: Configurable Directory Name"
+    purpose: |
+      Implement directory name configuration allowing clean names (no dated prefix)
+      when explicitly provided, while preserving backwards compatibility for default
+      kata workflows that expect dated prefixes.
+    estimated_hours: 4.0
+
+    steps:
+      # -------------------------------------------------------------------------
+      # Step 1.1: Implement Acceptance Test - Explicit Directory Name
+      # -------------------------------------------------------------------------
+      - step: "1.1"
+        name: "acceptance_test_explicit_directory_name"
+        description: |
+          Create acceptance test for explicit directory name scenario.
+          This test validates that when directory_name is explicitly provided,
+          the template creates that exact directory without dated prefix.
+
+        motivation: |
+          Outside-In TDD starts with acceptance tests. Maria needs to create
+          /enterprise-platform/services/trading-engine/ without 20260108_ prefix.
+
+        estimated_hours: 0.5
+        dependencies: []
+
+        files_to_modify:
+          - path: tests/acceptance/step_defs/test_us002_directory_name_configuration_steps.py
+            action: create_or_modify
+
+        implementation_details: |
+          Create pytest-bdd step definitions for US002 scenarios:
+
+          1. Given step: "Maria is in a platform services directory"
+             - Set up test directory context
+
+          2. When step: "Maria runs the cookiecutter with directory name {name}"
+             - Invoke cookiecutter with directory_name parameter
+             - Use subprocess or cookiecutter API
+
+          3. Then step: "the hook creates a directory named exactly {name}"
+             - Assert directory exists with exact name
+             - Assert no date prefix (no YYYYMMDD_ pattern)
+
+        acceptance_criteria:
+          - "Step definitions compile without errors"
+          - "Test runs and fails (Red phase - feature not implemented)"
+          - "Test covers Scenario: Explicit directory name skips kata name prompt"
+
+        test_command: |
+          cd /Users/michele.brissoni/ProgettiGit/UndeadGrishnackh/_template_Python_
+          pipenv run pytest tests/acceptance/step_defs/test_us002_directory_name_configuration_steps.py -v --tb=short
+
+        expected_outcome: "Test fails because clean directory name feature not yet implemented"
+
+      # -------------------------------------------------------------------------
+      # Step 1.2: Implement Acceptance Test - Default Dated Prefix Preserved
+      # -------------------------------------------------------------------------
+      - step: "1.2"
+        name: "acceptance_test_default_dated_prefix"
+        description: |
+          Create acceptance test verifying backwards compatibility.
+          When no directory_name is explicitly provided, the template must
+          continue creating dated directories like 20260108_fizzbuzz.
+
+        motivation: |
+          Existing kata workflows depend on dated prefix behavior.
+          Sam expects 20260108_fizzbuzz when running without directory_name.
+
+        estimated_hours: 0.5
+        dependencies: ["1.1"]
+
+        files_to_modify:
+          - path: tests/acceptance/step_defs/test_us002_directory_name_configuration_steps.py
+            action: modify
+
+        implementation_details: |
+          Add step definitions for default behavior scenario:
+
+          1. Given step: "Sam is starting a fresh coding kata"
+             - Set up clean test directory (no .git)
+
+          2. When step: "Sam runs the cookiecutter without specifying directory name"
+             - Invoke cookiecutter with kata_name only
+             - Let directory_name use default Jinja2 expression
+
+          3. Then steps:
+             - "Sam is prompted for a kata name" (verify prompting behavior)
+             - "the hook creates a dated directory with the kata name"
+               Assert directory matches pattern: YYYYMMDD_{kata_name}
+
+        acceptance_criteria:
+          - "Test covers Scenario: Default behavior preserved for standalone katas"
+          - "Test runs and passes (existing behavior already works)"
+          - "Test serves as regression guard for backwards compatibility"
+
+        test_command: |
+          cd /Users/michele.brissoni/ProgettiGit/UndeadGrishnackh/_template_Python_
+          pipenv run pytest tests/acceptance/step_defs/test_us002_directory_name_configuration_steps.py -v -k "default" --tb=short
+
+        expected_outcome: "Test passes confirming existing dated prefix behavior works"
+
+      # -------------------------------------------------------------------------
+      # Step 1.3: Modify cookiecutter.json - Add use_dated_prefix Parameter
+      # -------------------------------------------------------------------------
+      - step: "1.3"
+        name: "cookiecutter_json_add_dated_prefix_toggle"
+        description: |
+          Add use_dated_prefix parameter to cookiecutter.json with conditional
+          Jinja2 logic in directory_name default. This enables clean directory
+          names when use_dated_prefix=no while preserving dated behavior as default.
+
+        motivation: |
+          The cookiecutter.json is the configuration entry point. Adding a toggle
+          parameter allows users to explicitly request clean directory names
+          while keeping dated prefix as the safe default for kata workflows.
+
+        estimated_hours: 0.5
+        dependencies: ["1.1", "1.2"]
+
+        files_to_modify:
+          - path: cookiecutter.json
+            action: modify
+
+        implementation_details: |
+          Current cookiecutter.json structure:
+          {
+            "kata_name": "DummyKata",
+            "directory_name": "{% now 'local', '%Y%m%d' %}_{{ cookiecutter.kata_name.lower().replace(' ', '_') }}"
+          }
+
+          Target cookiecutter.json structure:
+          {
+            "kata_name": "DummyKata",
+            "use_dated_prefix": ["yes", "no"],
+            "directory_name": "{% if cookiecutter.use_dated_prefix == 'yes' %}{% now 'local', '%Y%m%d' %}_{{ cookiecutter.kata_name.lower().replace(' ', '_') }}{% else %}{{ cookiecutter.kata_name.lower().replace(' ', '_') }}{% endif %}"
+          }
+
+          Behavior:
+          - use_dated_prefix=yes (default, first in list): Creates 20260108_fizzbuzz
+          - use_dated_prefix=no: Creates fizzbuzz (clean name)
+
+          User can also override directory_name directly for full control.
+
+        acceptance_criteria:
+          - "cookiecutter.json parses without errors"
+          - "use_dated_prefix parameter appears in cookiecutter prompts"
+          - "Default value (yes) produces dated directory names"
+          - "Value (no) produces clean directory names"
+
+        validation_command: |
+          cd /Users/michele.brissoni/ProgettiGit/UndeadGrishnackh/_template_Python_
+          python -c "import json; json.load(open('cookiecutter.json'))"
+
+        expected_outcome: "cookiecutter.json is valid JSON with new parameter"
+
+      # -------------------------------------------------------------------------
+      # Step 1.4: Run Acceptance Tests - Verify US-002 Implementation
+      # -------------------------------------------------------------------------
+      - step: "1.4"
+        name: "verify_us002_acceptance_tests_pass"
+        description: |
+          Run all US-002 acceptance tests to verify the implementation.
+          Both explicit directory name and default dated prefix scenarios
+          must pass, confirming feature works and backwards compatibility preserved.
+
+        motivation: |
+          Outside-In TDD cycle completion: Red (wrote failing tests) -> Green (implement).
+          All acceptance tests passing confirms US-002 requirements met.
+
+        estimated_hours: 0.5
+        dependencies: ["1.3"]
+
+        files_to_modify: []  # Verification only
+
+        implementation_details: |
+          Execute the full acceptance test suite for US-002:
+
+          1. Run explicit directory name scenario:
+             - cookiecutter use_dated_prefix=no kata_name=trading-engine
+             - Assert creates trading-engine/ (no date prefix)
+
+          2. Run default dated prefix scenario:
+             - cookiecutter (defaults) kata_name=fizzbuzz
+             - Assert creates 20260108_fizzbuzz/ (dated prefix)
+
+          3. Run 5D-Wave source directory scenario:
+             - cookiecutter use_dated_prefix=no kata_name=source
+             - Assert creates source/ directory
+
+        acceptance_criteria:
+          - "All US-002 BDD scenarios pass"
+          - "No regressions in existing functionality"
+          - "Test output shows Green state"
+
+        test_command: |
+          cd /Users/michele.brissoni/ProgettiGit/UndeadGrishnackh/_template_Python_
+          pipenv run pytest tests/acceptance/ -v -k "US-002 or US002 or directory" --tb=short
+
+        expected_outcome: "All US-002 acceptance tests pass (Green phase)"
+
+      # -------------------------------------------------------------------------
+      # Step 1.5: Refactor - Clean Up Implementation (Optional)
+      # -------------------------------------------------------------------------
+      - step: "1.5"
+        name: "refactor_us002_implementation"
+        description: |
+          Review US-002 implementation for code quality improvements.
+          With tests passing (Green), safely refactor for clarity and maintainability.
+          This step is optional if implementation is already clean.
+
+        motivation: |
+          TDD cycle: Red -> Green -> Refactor. With test safety net in place,
+          improve code quality without risk of breaking functionality.
+
+        estimated_hours: 0.5
+        dependencies: ["1.4"]
+
+        files_to_modify:
+          - path: cookiecutter.json
+            action: review_and_optionally_modify
+
+        implementation_details: |
+          Review areas:
+
+          1. Jinja2 Expression Clarity:
+             - Is the conditional in directory_name readable?
+             - Consider multi-line Jinja2 for clarity if needed
+
+          2. Parameter Documentation:
+             - Add _help keys to cookiecutter.json if supported
+             - Ensure parameter names are self-explanatory
+
+          3. Test Organization:
+             - Are step definitions well-organized?
+             - Is test isolation proper (cleanup after each test)?
+
+        acceptance_criteria:
+          - "All tests still pass after refactoring"
+          - "Code is more readable/maintainable"
+          - "No functional changes introduced"
+
+        test_command: |
+          cd /Users/michele.brissoni/ProgettiGit/UndeadGrishnackh/_template_Python_
+          pipenv run pytest tests/acceptance/ -v -k "US002 or directory" --tb=short
+
+        expected_outcome: "Tests pass, code quality improved"
+
+# =============================================================================
+# PHASE 2: US-003 - IDE OPENING CONTROL
+# =============================================================================
+  - phase: 2
+    name: "US-003: IDE Opening Control"
+    purpose: |
+      Implement parameterized IDE launch with safe default (none) for automation,
+      and optional vscode/pycharm support for interactive developers.
+      All IDE operations must be non-fatal to ensure scaffold generation always succeeds.
+    estimated_hours: 4.0
+
+    steps:
+      # -------------------------------------------------------------------------
+      # Step 2.1: Implement Acceptance Test - Default No IDE (Automation Safe)
+      # -------------------------------------------------------------------------
+      - step: "2.1"
+        name: "acceptance_test_default_no_ide"
+        description: |
+          Create acceptance test verifying default behavior is no IDE launch.
+          This ensures 5D-Wave agents and CI/CD pipelines work without interruption.
+
+        motivation: |
+          Alex the 5D-Wave agent runs in headless automation. The previous VS Code
+          launch (now removed) blocked pipelines. Default must be safe for automation.
+
+        estimated_hours: 0.5
+        dependencies: ["1.5"]  # After US-002 complete
+
+        files_to_modify:
+          - path: tests/acceptance/step_defs/test_us003_ide_opening_control_steps.py
+            action: create_or_modify
+
+        implementation_details: |
+          Create pytest-bdd step definitions for US003 automation-safe scenarios:
+
+          1. Given step: "Alex is the 5D-Wave agent running in automated mode"
+             - Set up test context simulating headless execution
+
+          2. When step: "Alex generates a scaffold with directory name {name}"
+             - Invoke cookiecutter without specifying open_ide
+             - Use directory_name to ensure clean generation
+
+          3. Then steps:
+             - "no IDE application launches"
+               Assert no subprocess.Popen/run calls for code/pycharm
+             - "the terminal returns control to the calling process immediately"
+               Assert generation completes without hanging
+
+        acceptance_criteria:
+          - "Step definitions compile without errors"
+          - "Test runs and fails (Red phase - open_ide parameter not yet added)"
+          - "Test covers Scenario: Default behavior is no IDE for safe automation"
+
+        test_command: |
+          cd /Users/michele.brissoni/ProgettiGit/UndeadGrishnackh/_template_Python_
+          pipenv run pytest tests/acceptance/step_defs/test_us003_ide_opening_control_steps.py -v -k "default" --tb=short
+
+        expected_outcome: "Test fails because open_ide parameter not yet implemented"
+
+      # -------------------------------------------------------------------------
+      # Step 2.2: Implement Acceptance Test - VS Code Opening
+      # -------------------------------------------------------------------------
+      - step: "2.2"
+        name: "acceptance_test_vscode_opening"
+        description: |
+          Create acceptance test for VS Code launch when open_ide=vscode.
+          Test should verify the code command is invoked with correct directory.
+
+        motivation: |
+          Sam wants VS Code to open automatically for interactive kata development.
+          Test ensures the feature works when explicitly requested.
+
+        estimated_hours: 0.5
+        dependencies: ["2.1"]
+
+        files_to_modify:
+          - path: tests/acceptance/step_defs/test_us003_ide_opening_control_steps.py
+            action: modify
+
+        implementation_details: |
+          Add step definitions for VS Code scenario:
+
+          1. Given step: "Sam is developing interactively on their workstation"
+             - Set up test context with mock for subprocess
+
+          2. And step: "VS Code is installed with the code CLI available"
+             - Mock shutil.which('code') to return truthy path
+
+          3. When step: "Sam generates a scaffold with IDE option {option}"
+             - Invoke cookiecutter with open_ide=vscode
+
+          4. Then step: "VS Code opens with the generated project directory"
+             - Assert subprocess.run called with ['code', <directory>]
+
+          Note: Use mocking to avoid actually launching VS Code in tests.
+
+        acceptance_criteria:
+          - "Test covers Scenario: Developer requests VS Code opening"
+          - "Test uses mocking for subprocess to avoid real IDE launch"
+          - "Test fails in Red phase (feature not implemented)"
+
+        test_command: |
+          cd /Users/michele.brissoni/ProgettiGit/UndeadGrishnackh/_template_Python_
+          pipenv run pytest tests/acceptance/step_defs/test_us003_ide_opening_control_steps.py -v -k "vscode" --tb=short
+
+        expected_outcome: "Test fails because VS Code launch not implemented"
+
+      # -------------------------------------------------------------------------
+      # Step 2.3: Implement Acceptance Test - Non-Fatal IDE Failure
+      # -------------------------------------------------------------------------
+      - step: "2.3"
+        name: "acceptance_test_ide_failure_non_fatal"
+        description: |
+          Create acceptance test verifying IDE failures are non-fatal.
+          When VS Code CLI is not installed, generation must complete with warning.
+
+        motivation: |
+          Kim's machine lacks VS Code CLI. Generation must succeed regardless.
+          IDE launch is convenience, not requirement for scaffold creation.
+
+        estimated_hours: 0.5
+        dependencies: ["2.2"]
+
+        files_to_modify:
+          - path: tests/acceptance/step_defs/test_us003_ide_opening_control_steps.py
+            action: modify
+
+        implementation_details: |
+          Add step definitions for non-fatal failure scenario:
+
+          1. Given step: "a developer requests VS Code opening"
+             - Set up test context
+
+          2. And step: "the VS Code CLI is not installed or not in PATH"
+             - Mock shutil.which('code') to return None
+
+          3. When step: "the developer generates a scaffold with IDE option {option}"
+             - Invoke cookiecutter with open_ide=vscode
+
+          4. Then steps:
+             - "the hook prints a warning about VS Code not being found"
+               Assert warning message in output
+             - "the scaffold generation completes successfully"
+               Assert exit code 0
+             - "the exit code is zero indicating success"
+               Explicit success verification
+
+        acceptance_criteria:
+          - "Test covers Scenario: VS Code command not found is non-fatal"
+          - "Test verifies warning message presence"
+          - "Test confirms exit code 0 (success)"
+
+        test_command: |
+          cd /Users/michele.brissoni/ProgettiGit/UndeadGrishnackh/_template_Python_
+          pipenv run pytest tests/acceptance/step_defs/test_us003_ide_opening_control_steps.py -v -k "non-fatal or not-found" --tb=short
+
+        expected_outcome: "Test fails in Red phase"
+
+      # -------------------------------------------------------------------------
+      # Step 2.4: Add open_ide Parameter to cookiecutter.json
+      # -------------------------------------------------------------------------
+      - step: "2.4"
+        name: "cookiecutter_json_add_open_ide_parameter"
+        description: |
+          Add open_ide parameter to cookiecutter.json with choices [none, vscode, pycharm].
+          Default must be 'none' for safe automation (first choice is default).
+
+        motivation: |
+          Entry point for IDE control feature. Parameter in cookiecutter.json
+          makes the option visible to users and accessible via command line.
+
+        estimated_hours: 0.25
+        dependencies: ["2.3"]
+
+        files_to_modify:
+          - path: cookiecutter.json
+            action: modify
+
+        implementation_details: |
+          Current cookiecutter.json (after US-002):
+          {
+            "kata_name": "DummyKata",
+            "use_dated_prefix": ["yes", "no"],
+            "directory_name": "{% if ... %}...{% endif %}"
+          }
+
+          Target cookiecutter.json:
+          {
+            "kata_name": "DummyKata",
+            "use_dated_prefix": ["yes", "no"],
+            "directory_name": "{% if ... %}...{% endif %}",
+            "open_ide": ["none", "vscode", "pycharm"]
+          }
+
+          Note: First option in list ("none") becomes the default.
+
+        acceptance_criteria:
+          - "cookiecutter.json parses without errors"
+          - "open_ide parameter appears in cookiecutter prompts"
+          - "Default is 'none' (first in list)"
+          - "Options include: none, vscode, pycharm"
+
+        validation_command: |
+          cd /Users/michele.brissoni/ProgettiGit/UndeadGrishnackh/_template_Python_
+          python -c "import json; c=json.load(open('cookiecutter.json')); print(c.get('open_ide'))"
+
+        expected_outcome: "cookiecutter.json valid with open_ide parameter"
+
+      # -------------------------------------------------------------------------
+      # Step 2.5: Implement open_ide Function in post_gen_project.py
+      # -------------------------------------------------------------------------
+      - step: "2.5"
+        name: "implement_open_ide_function"
+        description: |
+          Implement the open_ide() function in post_gen_project.py that handles
+          IDE launching based on the open_ide parameter value. Must be non-fatal.
+
+        motivation: |
+          Core implementation of US-003. Function must handle all three cases
+          (none, vscode, pycharm) with platform-specific commands and non-fatal errors.
+
+        estimated_hours: 1.0
+        dependencies: ["2.4"]
+
+        files_to_modify:
+          - path: hooks/post_gen_project.py
+            action: modify
+
+        implementation_details: |
+          Add to hooks/post_gen_project.py:
+
+          1. Import shutil at top of file (for shutil.which)
+
+          2. Add open_ide function:
+
+          def open_ide(directory: str) -> None:
+              """Open IDE based on user preference.
+
+              Args:
+                  directory: Path to open in IDE
+
+              Non-fatal: warnings only, generation always succeeds.
+              """
+              import sys
+              ide_choice = "{{ cookiecutter.open_ide }}"
+
+              if ide_choice == "none":
+                  return
+
+              if ide_choice == "vscode":
+                  if shutil.which("code"):
+                      try:
+                          subprocess.run(["code", directory], check=False)
+                      except Exception as e:
+                          print(f"Warning: Could not open VS Code: {e}")
+                  else:
+                      print("Warning: VS Code command 'code' not found, skipping IDE open")
+                  return
+
+              if ide_choice == "pycharm":
+                  if shutil.which("pycharm"):
+                      try:
+                          subprocess.run(["pycharm", directory], check=False)
+                      except Exception as e:
+                          print(f"Warning: Could not open PyCharm: {e}")
+                  elif sys.platform == "darwin":
+                      try:
+                          subprocess.run(["open", "-a", "PyCharm", directory], check=False)
+                      except Exception as e:
+                          print(f"Warning: Could not open PyCharm on macOS: {e}")
+                  else:
+                      print("Warning: PyCharm command not found, skipping IDE open")
+                  return
+
+              print(f"Warning: Unknown IDE choice '{ide_choice}', skipping IDE open")
+
+          3. Call open_ide(PROJECT_DIRECTORY) in main() as final step
+
+        acceptance_criteria:
+          - "open_ide function added to post_gen_project.py"
+          - "Function handles none, vscode, pycharm options"
+          - "Function is non-fatal (uses warnings, not exceptions)"
+          - "shutil.which used for command availability check"
+          - "macOS fallback for PyCharm (open -a)"
+
+        validation_command: |
+          cd /Users/michele.brissoni/ProgettiGit/UndeadGrishnackh/_template_Python_
+          python -m py_compile hooks/post_gen_project.py
+
+        expected_outcome: "Hook compiles without errors"
+
+      # -------------------------------------------------------------------------
+      # Step 2.6: Integrate open_ide Call in main()
+      # -------------------------------------------------------------------------
+      - step: "2.6"
+        name: "integrate_open_ide_in_main"
+        description: |
+          Add open_ide() call to the main() function as the final step
+          before the "Scaffolding complete!" message.
+
+        motivation: |
+          IDE should open after all generation is complete, so developer
+          sees the finished project. Placement at end ensures all files exist.
+
+        estimated_hours: 0.25
+        dependencies: ["2.5"]
+
+        files_to_modify:
+          - path: hooks/post_gen_project.py
+            action: modify
+
+        implementation_details: |
+          Modify main() function to add IDE launch step:
+
+          Current end of main():
+              print("Scaffolding complete!")
+
+          New end of main():
+              # Step 7: Open IDE if requested (always, non-fatal)
+              open_ide(PROJECT_DIRECTORY)
+
+              print("Scaffolding complete!")
+
+          The open_ide call should:
+          - Come after push_to_remote() / skip push message
+          - Come before final success message
+          - Use PROJECT_DIRECTORY as the path argument
+
+        acceptance_criteria:
+          - "open_ide() called in main() function"
+          - "Called after all git operations complete"
+          - "Called before final success message"
+          - "Uses PROJECT_DIRECTORY constant"
+
+        test_command: |
+          cd /Users/michele.brissoni/ProgettiGit/UndeadGrishnackh/_template_Python_
+          grep -n "open_ide" hooks/post_gen_project.py
+
+        expected_outcome: "open_ide function defined and called in main()"
+
+      # -------------------------------------------------------------------------
+      # Step 2.7: Run Acceptance Tests - Verify US-003 Implementation
+      # -------------------------------------------------------------------------
+      - step: "2.7"
+        name: "verify_us003_acceptance_tests_pass"
+        description: |
+          Run all US-003 acceptance tests to verify the implementation.
+          Default no-IDE, vscode launch, pycharm launch, and non-fatal failure
+          scenarios must all pass.
+
+        motivation: |
+          Outside-In TDD cycle completion for US-003.
+          All acceptance tests passing confirms IDE control requirements met.
+
+        estimated_hours: 0.5
+        dependencies: ["2.6"]
+
+        files_to_modify: []  # Verification only
+
+        implementation_details: |
+          Execute the full acceptance test suite for US-003:
+
+          1. Default no-IDE scenario:
+             - cookiecutter (no open_ide specified)
+             - Assert no IDE launch occurs
+
+          2. VS Code scenario:
+             - cookiecutter open_ide=vscode (with mocked subprocess)
+             - Assert 'code' command invoked
+
+          3. PyCharm scenario:
+             - cookiecutter open_ide=pycharm (with mocked subprocess)
+             - Assert 'pycharm' or 'open -a PyCharm' command invoked
+
+          4. Non-fatal failure scenario:
+             - cookiecutter open_ide=vscode (with code CLI not found)
+             - Assert warning printed, generation succeeds
+
+        acceptance_criteria:
+          - "All US-003 BDD scenarios pass"
+          - "No regressions in US-002 functionality"
+          - "No regressions in US-001 git detection"
+          - "Test output shows Green state"
+
+        test_command: |
+          cd /Users/michele.brissoni/ProgettiGit/UndeadGrishnackh/_template_Python_
+          pipenv run pytest tests/acceptance/ -v -k "US-003 or US003 or ide" --tb=short
+
+        expected_outcome: "All US-003 acceptance tests pass (Green phase)"
+
+# =============================================================================
+# PHASE 3: INTEGRATION VERIFICATION AND DOCUMENTATION
+# =============================================================================
+  - phase: 3
+    name: "Integration Verification and Documentation"
+    purpose: |
+      Verify both features work together correctly, run full regression suite,
+      and update documentation for the new parameters.
+    estimated_hours: 2.0
+
+    steps:
+      # -------------------------------------------------------------------------
+      # Step 3.1: Integration Test - Both Features Combined
+      # -------------------------------------------------------------------------
+      - step: "3.1"
+        name: "integration_test_combined_features"
+        description: |
+          Test US-002 and US-003 working together. Platform engineer Maria
+          uses clean directory name AND VS Code opening for best experience.
+
+        motivation: |
+          Features should compose well. Maria wants both clean directory name
+          (trading-engine) and VS Code auto-open for productivity.
+
+        estimated_hours: 0.5
+        dependencies: ["2.7"]
+
+        files_to_modify:
+          - path: tests/acceptance/step_defs/test_integration_steps.py
+            action: create_or_modify
+
+        implementation_details: |
+          Create integration test scenario:
+
+          Scenario: Combined use of directory name and IDE control
+            Given Maria provides directory name "trading-engine"
+            And Maria wants VS Code to open for development
+            When Maria generates the scaffold with IDE option "vscode"
+            Then the scaffold is created in "trading-engine" directory
+            And VS Code opens with the "trading-engine" directory
+            And both features work together correctly
+
+          Test verifies:
+          - Directory created without dated prefix
+          - VS Code command receives correct path
+          - No interference between features
+
+        acceptance_criteria:
+          - "Integration scenario passes"
+          - "Clean directory name created"
+          - "VS Code invoked with correct directory"
+          - "Features compose without conflict"
+
+        test_command: |
+          cd /Users/michele.brissoni/ProgettiGit/UndeadGrishnackh/_template_Python_
+          pipenv run pytest tests/acceptance/ -v -k "integration" --tb=short
+
+        expected_outcome: "Integration test passes"
+
+      # -------------------------------------------------------------------------
+      # Step 3.2: Full Regression Test Suite
+      # -------------------------------------------------------------------------
+      - step: "3.2"
+        name: "full_regression_test_suite"
+        description: |
+          Run the complete test suite including US-001, US-002, US-003,
+          and any unit tests to ensure no regressions introduced.
+
+        motivation: |
+          Before declaring features complete, verify entire system still works.
+          US-001 git detection must continue to function correctly.
+
+        estimated_hours: 0.5
+        dependencies: ["3.1"]
+
+        files_to_modify: []  # Verification only
+
+        implementation_details: |
+          Run full test suite:
+
+          1. Unit tests (if any exist):
+             pipenv run pytest tests/unit/ -v
+
+          2. Acceptance tests (all features):
+             pipenv run pytest tests/acceptance/ -v
+
+          3. Verify US-001 regression:
+             - Git detection still works
+             - Integration mode still skips repo creation
+             - Standalone mode still creates repo
+
+          4. Check test coverage if configured:
+             pipenv run pytest --cov=hooks --cov-report=term-missing
+
+        acceptance_criteria:
+          - "All unit tests pass"
+          - "All acceptance tests pass"
+          - "US-001 functionality preserved"
+          - "US-002 functionality confirmed"
+          - "US-003 functionality confirmed"
+          - "No test failures or errors"
+
+        test_command: |
+          cd /Users/michele.brissoni/ProgettiGit/UndeadGrishnackh/_template_Python_
+          pipenv run pytest tests/ -v --tb=short
+
+        expected_outcome: "Full test suite passes with zero failures"
+
+      # -------------------------------------------------------------------------
+      # Step 3.3: Update README Documentation
+      # -------------------------------------------------------------------------
+      - step: "3.3"
+        name: "update_readme_documentation"
+        description: |
+          Update README.md or relevant documentation to explain new parameters
+          use_dated_prefix and open_ide with usage examples.
+
+        motivation: |
+          Users need to know about new features. Documentation enables adoption
+          and reduces support questions.
+
+        estimated_hours: 0.5
+        dependencies: ["3.2"]
+
+        files_to_modify:
+          - path: README.md
+            action: modify_if_exists
+
+        implementation_details: |
+          Add documentation section for new parameters:
+
+          ## Parameters
+
+          | Parameter | Default | Options | Description |
+          |-----------|---------|---------|-------------|
+          | kata_name | DummyKata | string | Name for the kata/project |
+          | use_dated_prefix | yes | yes, no | Add date prefix to directory |
+          | directory_name | (generated) | string | Override directory name |
+          | open_ide | none | none, vscode, pycharm | IDE to open after generation |
+
+          ## Usage Examples
+
+          ### Standard kata (dated prefix, no IDE):
+          ```bash
+          cookiecutter gh:undeadgrishnackh/_template_Python_
+          ```
+
+          ### Clean directory for monorepo integration:
+          ```bash
+          cookiecutter gh:undeadgrishnackh/_template_Python_ \
+            use_dated_prefix=no \
+            kata_name=trading-engine
+          ```
+
+          ### Interactive development with VS Code:
+          ```bash
+          cookiecutter gh:undeadgrishnackh/_template_Python_ \
+            open_ide=vscode
+          ```
+
+          ### 5D-Wave agent usage (automation safe):
+          ```bash
+          cookiecutter gh:undeadgrishnackh/_template_Python_ \
+            use_dated_prefix=no \
+            kata_name=source
+          # No IDE opens, terminal returns control immediately
+          ```
+
+        acceptance_criteria:
+          - "README updated with parameter documentation"
+          - "Usage examples provided"
+          - "Both features documented"
+
+        expected_outcome: "Documentation updated for user adoption"
+
+      # -------------------------------------------------------------------------
+      # Step 3.4: Create Git Commit
+      # -------------------------------------------------------------------------
+      - step: "3.4"
+        name: "create_feature_commit"
+        description: |
+          Create a single commit with all US-002 and US-003 changes.
+          Follow conventional commit format for clear history.
+
+        motivation: |
+          Clean commit history enables rollback if issues discovered.
+          Conventional commits support automatic changelog generation.
+
+        estimated_hours: 0.25
+        dependencies: ["3.3"]
+
+        files_to_modify: []  # Git operation
+
+        implementation_details: |
+          Commit message format:
+
+          feat(template): add configurable directory naming and IDE control
+
+          US-002: Configurable Directory Name
+          - Add use_dated_prefix parameter (yes/no)
+          - When no, creates clean directory without date prefix
+          - Enables monorepo integration use cases
+
+          US-003: IDE Opening Control
+          - Add open_ide parameter (none/vscode/pycharm)
+          - Default none for safe automation
+          - Non-fatal IDE launch failures
+          - macOS PyCharm fallback support
+
+          Closes #US-002, #US-003
+
+          Commands:
+          git add -A
+          git commit -m "feat(template): add configurable directory naming and IDE control" -m "..."
+
+        acceptance_criteria:
+          - "All changed files staged"
+          - "Commit message follows conventional format"
+          - "Both US-002 and US-003 mentioned"
+          - "Commit succeeds"
+
+        git_command: |
+          cd /Users/michele.brissoni/ProgettiGit/UndeadGrishnackh/_template_Python_
+          git add -A
+          git status
+
+        expected_outcome: "Clean commit with all changes"
+
+# =============================================================================
+# METADATA
+# =============================================================================
+metadata:
+  created_at: "2026-01-08T23:00:00Z"
+  architect: "Morgan (solution-architect)"
+  session_id: "us-002-003-roadmap-creation"
+
+  methodology_notes: |
+    This roadmap follows Outside-In TDD methodology:
+    1. Write acceptance tests first (Red)
+    2. Implement minimum code to pass tests (Green)
+    3. Refactor with test safety net (Refactor)
+
+    Each step is self-contained with:
+    - Complete context for sub-agent execution
+    - Clear acceptance criteria
+    - Test commands for verification
+    - Expected outcomes
+
+  parallel_execution_opportunities:
+    - "Steps 1.1 and 1.2 can run in parallel (both are acceptance test creation)"
+    - "Steps 2.1, 2.2, 2.3 can run in parallel (acceptance test creation)"
+    - "No other parallelization recommended due to dependencies"
+
+  risk_mitigations:
+    - risk: "Jinja2 complexity in cookiecutter.json"
+      mitigation: "Acceptance tests validate behavior before implementation"
+
+    - risk: "Platform-specific IDE commands"
+      mitigation: "Use shutil.which() and platform detection with fallbacks"
+
+    - risk: "Test mocking complexity for IDE launch"
+      mitigation: "Use unittest.mock for subprocess, avoid real IDE launch"
+
+  estimated_total_hours: 10.0
+  buffer_hours: 2.0
+  total_with_buffer: 12.0
+
+  files_affected:
+    - cookiecutter.json
+    - hooks/post_gen_project.py
+    - tests/acceptance/step_defs/test_us002_directory_name_configuration_steps.py
+    - tests/acceptance/step_defs/test_us003_ide_opening_control_steps.py
+    - tests/acceptance/step_defs/test_integration_steps.py
+    - README.md

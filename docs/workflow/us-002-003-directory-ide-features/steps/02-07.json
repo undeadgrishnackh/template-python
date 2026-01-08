@@ -1,0 +1,101 @@
+{
+  "task_id": "02-07",
+  "phase": 2,
+  "phase_name": "US-003: IDE Opening Control",
+  "name": "verify_us003_acceptance_tests_pass",
+  "description": "Run all US-003 acceptance tests to verify the implementation. Default no-IDE, vscode launch, pycharm launch, and non-fatal failure scenarios must all pass.",
+  "motivation": "Outside-In TDD cycle completion for US-003. All acceptance tests passing confirms IDE control requirements met.",
+  "estimated_hours": 0.5,
+  "dependencies": ["02-06"],
+  "files_to_modify": [],
+  "implementation_details": "Execute the full acceptance test suite for US-003:\n\n1. Default no-IDE scenario:\n   - cookiecutter (no open_ide specified)\n   - Assert no IDE launch occurs\n\n2. VS Code scenario:\n   - cookiecutter open_ide=vscode (with mocked subprocess)\n   - Assert 'code' command invoked\n\n3. PyCharm scenario:\n   - cookiecutter open_ide=pycharm (with mocked subprocess)\n   - Assert 'pycharm' or 'open -a PyCharm' command invoked\n\n4. Non-fatal failure scenario:\n   - cookiecutter open_ide=vscode (with code CLI not found)\n   - Assert warning printed, generation succeeds\n\nNote: All BDD scenarios are defined in tests/acceptance/features/US003_ide_opening_control.feature with 14 total scenarios covering happy paths (5), error paths (5), and cross-feature integration (4). Step definitions exist in tests/acceptance/steps/test_US003_ide_control_steps.py.",
+  "acceptance_criteria": [
+    "All US-003 BDD scenarios pass (14 scenarios minimum)",
+    "No regressions in US-002 functionality (directory name handling)",
+    "No regressions in US-001 git detection (when combined with IDE control)",
+    "Test output shows Green state with 0 failures",
+    "All test steps properly mapped to step definitions",
+    "Background step 'Given the cookiecutter template is available' has corresponding step definition"
+  ],
+  "test_command": "cd /Users/michele.brissoni/ProgettiGit/UndeadGrishnackh/_template_Python_ && pipenv run pytest tests/acceptance/steps/test_US003_ide_control_steps.py -v --tb=short",
+  "expected_outcome": "All US-003 acceptance tests pass (Green phase). Expected: 14 passed, 0 failed",
+  "context": {
+    "project_id": "us-002-003-directory-ide-features",
+    "methodology": "outside_in_tdd",
+    "related_user_story": "US-003"
+  },
+  "state": {
+    "status": "pending",
+    "ready_for_execution": false
+  },
+  "reviews": {
+    "review_date": "2026-01-08",
+    "reviewer": "software-crafter-reviewer",
+    "severity": "CRITICAL",
+    "summary": "Task has 1 CRITICAL blocking issue that prevents execution. Step definition missing for Background step causes all 14 US-003 BDD scenarios to fail.",
+    "issues": [
+      {
+        "id": 1,
+        "category": "implementation_details",
+        "severity": "CRITICAL",
+        "title": "Missing Step Definition for Background Precondition",
+        "description": "All 14 BDD scenarios in US003_ide_opening_control.feature have a Background section with the step 'Given the cookiecutter template is available' on line 8. This step definition is NOT implemented in test_US003_ide_control_steps.py, causing all 14 scenarios to fail with: StepDefinitionNotFoundError: Step definition is not found: Given 'the cookiecutter template is available'.",
+        "impact": "100% of US-003 acceptance tests fail immediately at background setup phase. Task cannot pass until this step is implemented.",
+        "location": "tests/acceptance/features/US003_ide_opening_control.feature:8 (Background section)",
+        "test_evidence": "Running pytest with -k 'ide' shows all 14 US-003 scenarios fail with StepDefinitionNotFoundError before any scenario-specific steps execute.",
+        "remediation": "Add step definition in test_US003_ide_control_steps.py:\n\n@given('the cookiecutter template is available')\ndef cookiecutter_template_available(test_env: TestEnvironment):\n    '''Verify cookiecutter template is ready for use.'''\n    assert test_env.template_dir.exists()\n    assert (test_env.template_dir / 'cookiecutter.json').exists()\n    return test_env"
+      },
+      {
+        "id": 2,
+        "category": "test_command",
+        "severity": "HIGH",
+        "title": "Test Command Too Broad, Includes Unrelated Failures",
+        "description": "The test_command uses '-k US-003 or US003 or ide' which matches 25+ test scenarios across US-001, US-002, and US-003 files. Current run shows 3 passed, 14 failed (US-003), plus failures in US-001 and US-002. The presence of non-US-003 failures makes it impossible to determine if US-003 implementation is correct.",
+        "impact": "MEDIUM. Task acceptance criteria specify 'No regressions in US-002 and US-001' but the test mix makes regression detection unclear. Recommend narrowing test scope.",
+        "location": "task JSON: test_command field",
+        "current": "pipenv run pytest tests/acceptance/ -v -k 'US-003 or US003 or ide' --tb=short",
+        "recommended": "pipenv run pytest tests/acceptance/steps/test_US003_ide_control_steps.py -v --tb=short"
+      },
+      {
+        "id": 3,
+        "category": "acceptance_criteria",
+        "severity": "MEDIUM",
+        "title": "Acceptance Criteria Incomplete - Missing Test Count Specification",
+        "description": "Acceptance criteria states 'All US-003 BDD scenarios pass' but does not specify the expected number. Feature file contains 14 scenarios (5 happy-path, 5 error-path, 4 integration). Without explicit count, it's ambiguous whether test passed if only 10 scenarios passed.",
+        "impact": "MEDIUM. Could lead to premature task approval if subset of scenarios pass.",
+        "location": "task JSON: acceptance_criteria field",
+        "remediation": "Update AC to: 'All 14 US-003 BDD scenarios pass (5 happy-path, 5 error-path, 4 integration)' and update expected_outcome to specify count."
+      },
+      {
+        "id": 4,
+        "category": "implementation_details",
+        "severity": "MEDIUM",
+        "title": "Implementation Details Incomplete - Lacks Step Mapping Reference",
+        "description": "Implementation details describe 4 test scenarios (default no-IDE, VS Code, PyCharm, non-fatal) but feature file contains 14 scenarios. Missing documentation of other scenarios: invalid IDE option, typo handling, timeouts, cross-feature integration.",
+        "impact": "MEDIUM. Sub-agent may miss important scenario coverage when implementing final tests.",
+        "location": "task JSON: implementation_details field",
+        "remediation": "Expand implementation_details to reference feature file with all 14 scenarios, or add note: 'Full 14 scenarios defined in tests/acceptance/features/US003_ide_opening_control.feature. Implementation details above show key scenarios; step definitions must cover all scenarios in feature file.'"
+      }
+    ],
+    "strengths": [
+      "Context is well-defined with project_id, methodology, and related user story documented.",
+      "BDD approach with feature file and step definitions provides clear specification.",
+      "Test environment fixtures (TestEnvironment, HookService) are properly set up for isolation and control.",
+      "14 comprehensive scenarios covering happy paths, error paths, and cross-feature integration.",
+      "Motivation clearly articulates Outside-In TDD cycle completion objective.",
+      "Dependencies correctly specify 02-06 as prerequisite (implementation must be complete before verification)."
+    ],
+    "blocking_issues": [
+      "Missing Background step definition causes 100% failure rate. CRITICAL - must be fixed before execution."
+    ],
+    "recommendation": "DO NOT EXECUTE. This task has 1 CRITICAL blocking issue. The missing Background step definition 'the cookiecutter template is available' causes all 14 scenarios to fail immediately. Remediation is simple: add the @given step definition shown in issue #1. After adding that step, re-run tests to verify all 14 scenarios can execute. Update test_command and acceptance_criteria per issues #2 and #3 for clarity.",
+    "next_steps": [
+      "Add missing step definition for 'Given the cookiecutter template is available' in test_US003_ide_control_steps.py",
+      "Update test_command to use: 'pipenv run pytest tests/acceptance/steps/test_US003_ide_control_steps.py -v --tb=short' (specific to US-003 only)",
+      "Update acceptance_criteria to specify '14 scenarios' explicitly",
+      "Expand implementation_details with note about full 14 scenarios in feature file",
+      "Re-run tests to verify all scenarios execute and identify any remaining step definition gaps",
+      "Set ready_for_execution to true only after Background step is added and all 14 scenarios can at least reach scenario-specific steps"
+    ]
+  }
+}

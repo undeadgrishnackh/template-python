@@ -1,0 +1,562 @@
+# Baseline: US-002 Configurable Source Directory Name & US-003 IDE Opening Control
+# Type: feature_development
+# Generated: 2026-01-08
+# Agent: researcher (Nova)
+
+project_id: us-002-003-directory-ide-features
+baseline_type: feature_development
+status: established
+
+# =============================================================================
+# CURRENT STATE ANALYSIS
+# =============================================================================
+current_state:
+  description: |
+    Following US-001 implementation, post_gen_project.py (190 lines) now has git detection
+    capability via is_inside_git_repo(). However, two critical gaps remain:
+
+    1. DIRECTORY NAMING GAP (US-002): The cookiecutter.json forces a dated prefix format
+       ({% now 'local', '%Y%m%d' %}_{{ cookiecutter.kata_name }}) for ALL directory names.
+       When directory_name is provided, the template STILL applies the dated prefix logic
+       because directory_name defaults to this Jinja2 expression. There is no way to
+       specify a clean directory name like "source" or "trading-engine" without the
+       20260108_ prefix.
+
+    2. IDE CONTROL GAP (US-003): The current implementation has NO IDE launch at all.
+       The VS Code launch (code .) that existed before US-001 was removed entirely.
+       While this is safe for automation, developers who want IDE auto-launch have
+       no option. There is no open_ide parameter.
+
+    The hook correctly detects git repos (US-001 complete) but cannot:
+    - Generate clean directory names for monorepo integration
+    - Allow optional IDE launch for interactive developers
+
+  files_analyzed:
+    - path: hooks/post_gen_project.py
+      lines_of_code: 190
+      last_modified: "Post US-001 implementation"
+
+    - path: cookiecutter.json
+      parameters:
+        - name: kata_name
+          default: "DummyKata"
+          description: "User-provided kata name"
+        - name: directory_name
+          default: "{% now 'local', '%Y%m%d' %}_{{ cookiecutter.kata_name.lower().replace(' ', '_') }}"
+          description: "Generated directory name (always dated)"
+
+  existing_capabilities:
+    - "Git repository detection via is_inside_git_repo() (US-001 complete)"
+    - "Integration mode: skip repo creation when inside existing git"
+    - "Standalone mode: full git workflow for clean directories"
+    - "Virtual environment creation (pipenv install --dev)"
+    - "Typing extensions fix (pipenv run forceTypingExtensions)"
+    - "Test execution (pipenv run tests)"
+    - "Pre-commit hooks installation (pipenv run install_pre_hooks)"
+    - "Validation commit creation (git add, commit)"
+    - "Remote push in standalone mode only"
+
+  current_limitations:
+    - limitation: "Forced dated directory prefix"
+      impact: "Monorepo integration creates 20260108_source/ instead of source/"
+      severity: high
+      affects: US-002
+
+    - limitation: "No parameter to override directory_name format"
+      impact: "Cannot specify clean names like 'trading-engine' or 'source'"
+      severity: high
+      affects: US-002
+
+    - limitation: "No IDE launch capability"
+      impact: "Interactive developers must manually open IDE after generation"
+      severity: medium
+      affects: US-003
+
+    - limitation: "No open_ide parameter in cookiecutter.json"
+      impact: "No mechanism to request VS Code or PyCharm launch"
+      severity: medium
+      affects: US-003
+
+  why_insufficient: |
+    US-002 INSUFFICIENCY:
+    Maria the platform engineer runs `cookiecutter directory_name=trading-engine` expecting
+    to create `/enterprise-platform/services/trading-engine/`. Instead, the template creates
+    `20260108_trading-engine/` because the default Jinja2 expression always applies the
+    dated prefix. There is no conditional logic to use the raw value when explicitly provided.
+
+    The current cookiecutter.json has directory_name defaulting to a Jinja2 expression,
+    but when the user provides a value like "source", cookiecutter still uses the default
+    expression because the parameter isn't designed for explicit override.
+
+    US-003 INSUFFICIENCY:
+    Sam the interactive developer finishes generating a kata and wants VS Code to open
+    automatically. Currently, nothing happens - the IDE launch was removed in US-001 to
+    prevent blocking automated pipelines. There is no way for Sam to request IDE auto-launch.
+
+# =============================================================================
+# REQUIREMENTS SOURCE
+# =============================================================================
+requirements_source:
+  origin: docs/requirements/user-stories.md
+  document_id: US-COOKIECUTTER-GIT-2026-001
+  version: "1.0"
+  status: DoR VALIDATED
+  date: 2026-01-08
+  author: Riley (Product Owner)
+
+  validation_method: |
+    Product owner authored user stories with:
+    - Concrete personas (Maria, Alex, Sam, Raj, Kim)
+    - Domain-specific examples (7 scenarios across both stories)
+    - BDD acceptance criteria (Gherkin format)
+    - Clear acceptance criteria checklist (5 items per story)
+
+# =============================================================================
+# SPECIFIC REQUIREMENTS FROM US-002
+# =============================================================================
+us_002_requirements:
+  title: "Configurable Source Directory Name"
+  story_summary: |
+    Maria is a platform engineer integrating Python services into a monorepo.
+    She needs directories like /enterprise-platform/services/trading-engine/
+    without dated prefixes that clutter the structure.
+
+  acceptance_criteria:
+    - id: AC-002-01
+      description: "directory_name parameter accepted by cookiecutter.json"
+      type: functional
+      priority: P1
+
+    - id: AC-002-02
+      description: "When directory_name provided, skip kata_name prompt"
+      type: functional
+      priority: P1
+
+    - id: AC-002-03
+      description: "Generated directory uses exact directory_name value (no dated prefix)"
+      type: functional
+      priority: P1
+
+    - id: AC-002-04
+      description: "Default behavior (dated prefix) preserved when parameter not provided"
+      type: functional
+      priority: P1
+
+    - id: AC-002-05
+      description: "Parameter works in combination with git detection (US-001)"
+      type: integration
+      priority: P1
+
+  bdd_scenarios:
+    - name: "Explicit directory name skips kata_name prompt"
+      persona: Maria (Platform engineer)
+      context: In /enterprise-platform/services/
+      command: "cookiecutter directory_name=trading-engine"
+      expected: |
+        - NOT prompted for kata_name
+        - Creates /enterprise-platform/services/trading-engine/
+        - Directory structure matches project conventions (no dated prefix)
+
+    - name: "5D-Wave source directory convention"
+      persona: Alex (5D-Wave agent)
+      context: In /my-trading-bot/
+      command: "cookiecutter directory_name=source"
+      expected: |
+        - Creates /my-trading-bot/source/
+        - Structure matches 5D-Wave expectations
+        - Git detection from US-001 skips repo creation
+
+    - name: "Default behavior preserved for standalone katas"
+      persona: Sam (Developer)
+      context: Starting fresh kata
+      command: "cookiecutter (no directory_name)"
+      expected: |
+        - Prompted for kata_name
+        - Creates 20260108_fizzbuzz/ (dated prefix applied)
+        - Full git initialization runs
+
+# =============================================================================
+# SPECIFIC REQUIREMENTS FROM US-003
+# =============================================================================
+us_003_requirements:
+  title: "IDE Opening Control"
+  story_summary: |
+    Alex is a 5D-Wave AI agent executing cookiecutter in headless automation.
+    The previous implementation always ran `code .` which blocked automated pipelines.
+    Developers like Sam and Raj want optional IDE launch with their preferred tool.
+
+  acceptance_criteria:
+    - id: AC-003-01
+      description: "open_ide parameter added to cookiecutter.json with default 'none'"
+      type: functional
+      priority: P1
+
+    - id: AC-003-02
+      description: "open_ide=none results in no IDE launch"
+      type: functional
+      priority: P1
+
+    - id: AC-003-03
+      description: "open_ide=vscode executes 'code <directory>'"
+      type: functional
+      priority: P2
+
+    - id: AC-003-04
+      description: "open_ide=pycharm executes 'pycharm <directory>' with macOS fallback"
+      type: functional
+      priority: P2
+
+    - id: AC-003-05
+      description: "IDE failures are non-fatal (warning only, generation succeeds)"
+      type: functional
+      priority: P1
+
+    - id: AC-003-06
+      description: "Invalid open_ide values produce helpful error message"
+      type: functional
+      priority: P3
+
+  bdd_scenarios:
+    - name: "Default behavior is no IDE (agentic safe)"
+      persona: Alex (5D-Wave agent)
+      context: Automated DESIGN wave workflow
+      command: "cookiecutter directory_name=source"
+      expected: |
+        - No IDE opens
+        - Terminal returns control to calling process
+        - Agent continues automated workflow
+
+    - name: "Developer requests VS Code"
+      persona: Sam (Developer)
+      context: Interactive kata development
+      command: "cookiecutter open_ide=vscode"
+      expected: |
+        - VS Code opens with generated directory
+        - Executes: code <generated_directory>
+
+    - name: "Developer requests PyCharm"
+      persona: Raj (PyCharm user)
+      context: Interactive development
+      command: "cookiecutter open_ide=pycharm"
+      expected: |
+        - PyCharm opens with generated directory
+        - Executes: pycharm <directory> or open -a "PyCharm" on macOS
+
+    - name: "IDE command not found is non-fatal"
+      persona: Kim (Developer)
+      context: code CLI not installed
+      command: "cookiecutter open_ide=vscode"
+      expected: |
+        - Prints warning: "VS Code command not found"
+        - Generation completes successfully
+        - Exit code is 0 (success)
+
+# =============================================================================
+# ALTERNATIVES CONSIDERED
+# =============================================================================
+alternatives_considered:
+  us_002_alternatives:
+    - name: "Always use dated prefix"
+      description: "Keep the existing behavior, require users to rename directories"
+      pros:
+        - "Zero implementation effort"
+        - "Consistent naming for all projects"
+      cons:
+        - "Blocks monorepo integration use case"
+        - "Forces manual renaming for 5D-Wave workflows"
+        - "Inconsistent with user expectations"
+      verdict: rejected
+      rejection_reason: |
+        Maria explicitly needs clean directory names for monorepo structure.
+        5D-Wave convention expects 'source/' not '20260108_source/'.
+        Manual renaming defeats automation benefits.
+
+    - name: "Separate parameter for format toggle"
+      description: "Add use_dated_prefix=true/false alongside directory_name"
+      pros:
+        - "Explicit control over format"
+      cons:
+        - "Extra parameter complexity"
+        - "Redundant with directory_name being explicitly provided"
+      verdict: rejected
+      rejection_reason: |
+        If directory_name is explicitly provided, it signals intent for clean naming.
+        Additional toggle is unnecessary complexity.
+
+  us_003_alternatives:
+    - name: "Remove IDE launch entirely"
+      description: "Never launch IDE, users must open manually"
+      pros:
+        - "Simplest implementation"
+        - "Already done in US-001 cleanup"
+        - "Safe for all automation scenarios"
+      cons:
+        - "Regression for interactive developers"
+        - "Extra step for kata creation workflow"
+      verdict: rejected_for_final
+      rejection_reason: |
+        While US-001 removed IDE launch for safety, developers explicitly want
+        the option back. The parameterized approach gives control to both
+        automated agents (default none) and interactive developers (opt-in).
+
+    - name: "Detect environment automatically"
+      description: "Detect if running in TTY/GUI and auto-launch IDE"
+      pros:
+        - "No parameter needed"
+      cons:
+        - "Unreliable detection in various environments"
+        - "Docker containers may have TTY but no GUI"
+        - "SSH sessions complicate detection"
+      verdict: rejected
+      rejection_reason: |
+        Automatic detection is unreliable. Explicit parameter gives
+        predictable, user-controlled behavior.
+
+selected_approach:
+  us_002:
+    name: "Conditional directory naming based on explicit parameter detection"
+    description: |
+      Modify cookiecutter.json to detect when directory_name is explicitly provided
+      vs using the default. When explicitly provided, use the raw value without
+      dated prefix. When defaulted, apply the existing Jinja2 dated expression.
+    implementation_strategy: |
+      Option A: Use a sentinel value to detect explicit provision
+      Option B: Restructure parameters so kata_name drives the dated format
+      Option C: Use Jinja2 conditional in directory_name default
+    lines_of_code: ~10-20 in cookiecutter.json
+    hook_changes: minimal (use directory_name as-is)
+
+  us_003:
+    name: "Parameterized IDE launch with non-fatal error handling"
+    description: |
+      Add open_ide parameter with choices [none, vscode, pycharm].
+      Default to 'none' for safe automation. Use shutil.which() to check
+      command availability. Wrap in try/except for non-fatal behavior.
+    lines_of_code: ~30-40 in post_gen_project.py
+    dependencies: shutil.which (stdlib)
+
+# =============================================================================
+# IMPLEMENTATION GUIDANCE
+# =============================================================================
+implementation_guidance:
+  us_002_changes:
+    cookiecutter_json:
+      before: |
+        {
+          "kata_name": "DummyKata",
+          "directory_name": "{% now 'local', '%Y%m%d' %}_{{ cookiecutter.kata_name.lower().replace(' ', '_') }}"
+        }
+      after: |
+        {
+          "kata_name": "DummyKata",
+          "use_dated_prefix": ["yes", "no"],
+          "directory_name": "{% if cookiecutter.use_dated_prefix == 'yes' %}{% now 'local', '%Y%m%d' %}_{{ cookiecutter.kata_name.lower().replace(' ', '_') }}{% else %}{{ cookiecutter.kata_name.lower().replace(' ', '_') }}{% endif %}"
+        }
+      alternative_approach: |
+        Simpler approach: Make directory_name completely user-controlled:
+        - If user provides directory_name explicitly, use it as-is
+        - If not provided, prompt for kata_name and apply dated prefix
+        This requires hook logic to detect which was provided.
+
+    detection_logic: |
+      In post_gen_project.py, the directory_name presence signals integration mode:
+
+      def is_explicit_directory_name() -> bool:
+          """Detect if directory_name was explicitly provided (not dated format)."""
+          directory_name = "{{ cookiecutter.directory_name }}"
+          # If it matches the dated pattern, it's the default
+          import re
+          dated_pattern = r'^\d{8}_'
+          return not re.match(dated_pattern, directory_name)
+
+  us_003_changes:
+    cookiecutter_json_addition: |
+      Add to cookiecutter.json:
+      {
+        "open_ide": ["none", "vscode", "pycharm"]
+      }
+
+    hook_implementation: |
+      import shutil
+
+      def open_ide(directory: str) -> None:
+          """Open IDE based on user preference.
+
+          Args:
+              directory: Path to open in IDE
+
+          Non-fatal: warnings only, generation always succeeds.
+          """
+          ide_choice = "{{ cookiecutter.open_ide }}"
+
+          if ide_choice == "none":
+              return
+
+          if ide_choice == "vscode":
+              if shutil.which("code"):
+                  try:
+                      subprocess.run(["code", directory], check=False)
+                  except Exception as e:
+                      print(f"Warning: Could not open VS Code: {e}")
+              else:
+                  print("Warning: VS Code command 'code' not found, skipping IDE open")
+              return
+
+          if ide_choice == "pycharm":
+              # Try pycharm CLI first, then macOS fallback
+              if shutil.which("pycharm"):
+                  try:
+                      subprocess.run(["pycharm", directory], check=False)
+                  except Exception as e:
+                      print(f"Warning: Could not open PyCharm: {e}")
+              elif sys.platform == "darwin":
+                  try:
+                      subprocess.run(["open", "-a", "PyCharm", directory], check=False)
+                  except Exception as e:
+                      print(f"Warning: Could not open PyCharm on macOS: {e}")
+              else:
+                  print("Warning: PyCharm command not found, skipping IDE open")
+              return
+
+          print(f"Warning: Unknown IDE choice '{ide_choice}', skipping IDE open")
+
+  integration_point: |
+    In main() function, add IDE launch as final step (after push or after commit):
+
+    # Final step: Open IDE if requested
+    open_ide(PROJECT_DIRECTORY)
+
+    print("Scaffolding complete!")
+
+# =============================================================================
+# DEPENDENCY ANALYSIS
+# =============================================================================
+dependencies:
+  story_dependencies: |
+    US-001 (Git Detection) <-- foundation --> US-002 (Directory Name)
+             |
+             | When directory_name explicitly provided (clean name),
+             | it serves as secondary signal for integration mode
+             | (even if .git detection somehow fails)
+             |
+             +-- independent of --> US-003 (IDE Control)
+
+  us_001_foundation:
+    - "is_inside_git_repo() function (already implemented)"
+    - "Integration mode vs standalone mode branching (already implemented)"
+    - "Conditional git operations (already implemented)"
+
+  us_002_builds_on:
+    - "Uses kata_name in commit message (existing)"
+    - "May use directory_name pattern detection as integration signal"
+
+  us_003_independent:
+    - "New capability, no dependencies on US-001 or US-002"
+    - "Can be implemented in parallel"
+
+  implementation_order: |
+    Recommended order:
+    1. US-002 first (affects cookiecutter.json parameters)
+    2. US-003 second (adds to hook only)
+    Both can be committed together or separately.
+
+# =============================================================================
+# SUCCESS METRICS
+# =============================================================================
+success_metrics:
+  us_002_metrics:
+    - metric: "Clean directory name generation"
+      baseline: "0% (always dated prefix)"
+      target: "100% when directory_name explicitly provided"
+
+    - metric: "Backwards compatibility"
+      baseline: "100% (dated prefix for katas)"
+      target: "100% preserved when using default"
+
+    - metric: "5D-Wave agent success rate"
+      baseline: "Works with dated prefix (suboptimal)"
+      target: "Works with clean 'source/' directory"
+
+  us_003_metrics:
+    - metric: "Headless automation safety"
+      baseline: "100% safe (no IDE launch currently)"
+      target: "100% safe (open_ide=none default)"
+
+    - metric: "Interactive developer satisfaction"
+      baseline: "0% (must manually open IDE)"
+      target: "100% when open_ide=vscode|pycharm"
+
+    - metric: "Non-fatal error handling"
+      baseline: "N/A"
+      target: "100% (IDE failures never block generation)"
+
+# =============================================================================
+# RISK ASSESSMENT
+# =============================================================================
+risk_assessment:
+  us_002_risks:
+    - risk: "Jinja2 complexity in cookiecutter.json"
+      likelihood: medium
+      impact: low
+      mitigation: "Test with various parameter combinations"
+
+    - risk: "Breaking change for users expecting dated prefix"
+      likelihood: low
+      impact: medium
+      mitigation: "Default behavior preserved, explicit parameter required for clean names"
+
+  us_003_risks:
+    - risk: "Platform-specific IDE commands"
+      likelihood: high
+      impact: low
+      mitigation: "Use shutil.which() and platform detection, non-fatal fallback"
+
+    - risk: "IDE hangs or blocking behavior"
+      likelihood: low
+      impact: medium
+      mitigation: "Use subprocess.run with check=False, don't wait for IDE"
+
+  combined_risk_level: LOW
+  rationale: |
+    Both features are isolated changes to a single hook file and cookiecutter.json.
+    Default behavior is preserved. All new behaviors are opt-in via explicit parameters.
+    Non-fatal error handling prevents any new failure modes.
+
+# =============================================================================
+# METADATA
+# =============================================================================
+metadata:
+  created_at: 2026-01-08T00:00:00Z
+  researcher: Nova (researcher agent)
+  session_id: us-002-003-baseline-establishment
+  confidence: high
+
+  sources_consulted:
+    - path: docs/requirements/user-stories.md
+      type: requirements
+      sections: ["US-002", "US-003"]
+      reputation: high (DoR validated)
+
+    - path: hooks/post_gen_project.py
+      type: source_code
+      lines: 190
+      reputation: high (post US-001 implementation)
+
+    - path: cookiecutter.json
+      type: configuration
+      reputation: high (current implementation)
+
+    - path: docs/workflow/us-001-git-detection/baseline.yaml
+      type: reference
+      reputation: high (approved baseline)
+
+  cross_references:
+    - document: docs/workflow/us-001-git-detection/baseline.yaml
+      relation: "US-001 provides foundation for US-002 integration signal"
+
+  total_effort_estimate:
+    us_002: "0.5 day"
+    us_003: "0.5 day"
+    combined: "1 day"
+    risk_buffer: "0.5 day"
+    total_with_buffer: "1.5 days"

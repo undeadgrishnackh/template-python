@@ -1,0 +1,82 @@
+{
+  "task_id": "02-05",
+  "phase": 2,
+  "phase_name": "US-003: IDE Opening Control",
+  "name": "implement_open_ide_function",
+  "description": "Implement the open_ide() function in post_gen_project.py that handles IDE launching based on the open_ide parameter value. Must be non-fatal.",
+  "motivation": "Core implementation of US-003. Function must handle all three cases (none, vscode, pycharm) with platform-specific commands and non-fatal errors.",
+  "estimated_hours": 1.0,
+  "dependencies": ["02-04"],
+  "files_to_modify": [
+    {
+      "path": "hooks/post_gen_project.py",
+      "action": "modify"
+    }
+  ],
+  "implementation_details": "Add to hooks/post_gen_project.py:\n\n1. ADD IMPORT: Insert 'import shutil' after existing imports (after line 4, before PROJECT_DIRECTORY definition)\n\n2. ADD FUNCTION (after push_to_remote() function, before main() definition at line 142):\n\ndef open_ide(directory: str) -> None:\n    \"\"\"Open IDE based on user preference.\n\n    Args:\n        directory: Path to open in IDE\n\n    Non-fatal: warnings only, generation always succeeds.\n    \"\"\"\n    import sys\n    ide_choice = \"{{ cookiecutter.open_ide }}\"\n\n    if ide_choice == \"none\":\n        return\n\n    if ide_choice == \"vscode\":\n        if shutil.which(\"code\"):\n            try:\n                subprocess.run([\"code\", directory], check=False)\n            except Exception as e:\n                print(f\"Warning: Could not open VS Code: {e}\")\n        else:\n            print(\"Warning: VS Code command 'code' not found, skipping IDE open\")\n        return\n\n    if ide_choice == \"pycharm\":\n        if shutil.which(\"pycharm\"):\n            try:\n                subprocess.run([\"pycharm\", directory], check=False)\n            except Exception as e:\n                print(f\"Warning: Could not open PyCharm: {e}\")\n        elif sys.platform == \"darwin\":\n            try:\n                subprocess.run([\"open\", \"-a\", \"PyCharm\", directory], check=False)\n            except Exception as e:\n                print(f\"Warning: Could not open PyCharm on macOS: {e}\")\n        else:\n            print(\"Warning: PyCharm command not found, skipping IDE open\")\n        return\n\n    print(f\"Warning: Unknown IDE choice '{ide_choice}', skipping IDE open\")\n\n3. ADD FUNCTION CALL: In main() function, add 'open_ide(PROJECT_DIRECTORY)' after line 186 (after print('Scaffolding complete!') and before the function ends). This ensures IDE opens AFTER all setup is complete.",
+  "acceptance_criteria": [
+    "open_ide function added to post_gen_project.py",
+    "Function handles none, vscode, pycharm options",
+    "Function is non-fatal (uses warnings, not exceptions)",
+    "shutil.which used for command availability check",
+    "macOS fallback for PyCharm (open -a)"
+  ],
+  "validation_command": "cd /Users/michele.brissoni/ProgettiGit/UndeadGrishnackh/_template_Python_ && python -m py_compile hooks/post_gen_project.py",
+  "expected_outcome": "Hook compiles without errors",
+  "context": {
+    "project_id": "us-002-003-directory-ide-features",
+    "methodology": "outside_in_tdd",
+    "related_user_story": "US-003"
+  },
+  "state": {
+    "status": "pending",
+    "ready_for_execution": true
+  },
+  "reviews": {
+    "reviewer": "software-crafter-reviewer",
+    "review_date": "2026-01-08",
+    "issues_found": 3,
+    "severity_critical": 1,
+    "severity_high": 2,
+    "issues": [
+      {
+        "id": "R1",
+        "severity": "critical",
+        "category": "Missing Import",
+        "description": "implementation_details specify using shutil.which() but missing 'import shutil' statement",
+        "location": "hooks/post_gen_project.py imports section (after line 4)",
+        "fix": "ADD: import shutil after subprocess import (line 4)",
+        "status": "clarified_in_implementation_details"
+      },
+      {
+        "id": "R2",
+        "severity": "high",
+        "category": "Incomplete Specification",
+        "description": "implementation_details do not specify exact line location for open_ide() function call in main()",
+        "location": "main() function orchestration (around line 186)",
+        "fix": "Clarified: add call after 'print(Scaffolding complete!)' and before function ends",
+        "status": "clarified_in_implementation_details"
+      },
+      {
+        "id": "R3",
+        "severity": "high",
+        "category": "Weak Validation Command",
+        "description": "validation_command only checks Python syntax, not functional correctness. Does not verify the function can be called or handles all three IDE options.",
+        "location": "validation_command field",
+        "recommendation": "Current validation is acceptable but limited. Sub-agent should manually test: import and call open_ide() with all three ide_choice values.",
+        "status": "acknowledged"
+      }
+    ],
+    "strengths": [
+      "Non-fatal error handling correctly implemented with try-catch and warnings",
+      "subprocess.run() uses check=False to prevent fatal errors",
+      "macOS PyCharm fallback (open -a) properly specified",
+      "Dependency correctly specified (depends on 02-04 for cookiecutter.json parameter)",
+      "Function signature and docstring clear and professional"
+    ],
+    "completeness_assessment": "COMPLETE with clarifications",
+    "testability_assessment": "TESTABLE - validation command checks syntax, functional test requires manual verification of all three branches",
+    "context_sufficiency": "SUFFICIENT - sub-agent has clear implementation details with line number references and exact code to add",
+    "ready_for_execution_validation": "APPROVED - Issues identified and clarified. Implementation details are now self-contained and unambiguous."
+  }
+}

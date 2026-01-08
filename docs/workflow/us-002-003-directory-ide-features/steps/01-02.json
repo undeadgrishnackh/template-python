@@ -1,0 +1,152 @@
+{
+  "task_id": "01-02",
+  "phase": 1,
+  "phase_name": "US-002: Configurable Directory Name",
+  "name": "acceptance_test_default_dated_prefix",
+  "description": "Create acceptance test verifying backwards compatibility. When no directory_name is explicitly provided, the template must continue creating dated directories like 20260108_fizzbuzz.",
+  "motivation": "Existing kata workflows depend on dated prefix behavior. Sam expects 20260108_fizzbuzz when running without directory_name.",
+  "estimated_hours": 0.5,
+  "dependencies": ["01-01"],
+  "files_to_modify": [
+    {
+      "path": "tests/acceptance/step_defs/test_us002_directory_name_configuration_steps.py",
+      "action": "modify"
+    }
+  ],
+  "implementation_details": "Add step definitions for default behavior scenario:\n\n1. Given step: \"Sam is starting a fresh coding kata\"\n   - Set up clean test directory (no .git)\n\n2. When step: \"Sam runs the cookiecutter without specifying directory name\"\n   - Invoke cookiecutter with kata_name only\n   - Let directory_name use default Jinja2 expression\n\n3. Then steps:\n   - \"Sam is prompted for a kata name\" (verify prompting behavior)\n   - \"the hook creates a dated directory with the kata name\"\n     Assert directory matches pattern: YYYYMMDD_{kata_name}",
+  "acceptance_criteria": [
+    "Test covers Scenario: Default behavior preserved for standalone katas",
+    "Test runs and passes (existing behavior already works)",
+    "Test serves as regression guard for backwards compatibility"
+  ],
+  "test_command": "cd /Users/michele.brissoni/ProgettiGit/UndeadGrishnackh/_template_Python_ && pipenv run pytest tests/acceptance/step_defs/test_us002_directory_name_configuration_steps.py -v -k 'default' --tb=short",
+  "expected_outcome": "Test passes confirming existing dated prefix behavior works",
+  "context": {
+    "project_id": "us-002-003-directory-ide-features",
+    "methodology": "outside_in_tdd",
+    "feature_file": "tests/acceptance/features/US002_directory_name_configuration.feature",
+    "related_user_story": "US-002"
+  },
+  "state": {
+    "status": "pending",
+    "ready_for_execution": false
+  },
+  "reviews": [
+    {
+      "reviewer": "software-crafter-reviewer",
+      "review_date": "2026-01-08T00:00:00Z",
+      "iteration": 1,
+      "findings": {
+        "implementation_details": {
+          "status": "INCOMPLETE",
+          "issues": [
+            {
+              "issue": "File path in files_to_modify is incorrect",
+              "severity": "CRITICAL",
+              "current_path": "tests/acceptance/step_defs/test_us002_directory_name_configuration_steps.py",
+              "actual_path": "tests/acceptance/steps/test_US002_directory_name_steps.py",
+              "note": "The target test file already exists at a different location. The step definitions are already implemented in the existing file."
+            },
+            {
+              "issue": "Implementation details lack specificity for execution",
+              "severity": "HIGH",
+              "detail": "The 'Add step definitions for default behavior scenario' instruction is vague. Step definitions already exist in the actual test file (lines 68-76, 207-222, 286-293, 392-407, 400-407). The task should clarify whether new step definitions need to be added or if the scenario only needs to be referenced in the feature file.",
+              "recommendation": "Clarify: Are we adding NEW step definitions or just referencing existing ones that support the backwards-compatibility scenario?"
+            },
+            {
+              "issue": "Feature file reference incomplete",
+              "severity": "MEDIUM",
+              "detail": "Implementation details mention 'Scenario: Default behavior preserved for standalone katas' but don't specify this scenario already exists in the feature file at lines 30-37.",
+              "recommendation": "Add explicit line reference: The scenario 'Default behavior preserved for standalone katas' already exists in US002_directory_name_configuration.feature:30-37"
+            }
+          ]
+        },
+        "acceptance_criteria": {
+          "status": "MOSTLY_CLEAR",
+          "issues": [
+            {
+              "issue": "AC-1 verification criteria vague",
+              "severity": "MEDIUM",
+              "detail": "'Test covers Scenario: Default behavior preserved for standalone katas' - doesn't specify HOW to verify this (e.g., 'pytest tag matching', 'feature file line matching')",
+              "recommendation": "Add specific verification: 'Test file contains scenario tagged with @backwards-compatible @default-preserved and all related step definitions'"
+            },
+            {
+              "issue": "AC-2 and AC-3 are equivalent",
+              "severity": "LOW",
+              "detail": "AC-2 'Test runs and passes' and AC-3 'Test serves as regression guard' are outcomes of the same action. They should be combined or split more distinctly.",
+              "recommendation": "Split into: 'Test execution validates existing behavior' + 'Test prevents regression with mock assertion'"
+            }
+          ]
+        },
+        "dependencies": {
+          "status": "CORRECT",
+          "detail": "Dependency on '01-01' is correct - Git detection must be working before testing directory name configuration."
+        },
+        "test_command": {
+          "status": "EXECUTABLE_WITH_ISSUES",
+          "issues": [
+            {
+              "issue": "Test command references incorrect file path",
+              "severity": "CRITICAL",
+              "current_command": "cd /Users/michele.brissoni/ProgettiGit/UndeadGrishnackh/_template_Python_ && pipenv run pytest tests/acceptance/step_defs/test_us002_directory_name_configuration_steps.py -v -k 'default' --tb=short",
+              "actual_path_needed": "tests/acceptance/steps/test_US002_directory_name_steps.py",
+              "corrected_command": "cd /Users/michele.brissoni/ProgettiGit/UndeadGrishnackh/_template_Python_ && pipenv run pytest tests/acceptance/steps/test_US002_directory_name_steps.py::test_Default_behavior_preserved_for_standalone_katas -v --tb=short"
+            },
+            {
+              "issue": "Test filter '-k default' is too broad",
+              "severity": "MEDIUM",
+              "detail": "The '-k default' filter may match unintended test functions. The feature file defines the scenario with @backwards-compatible @default-preserved tags.",
+              "recommendation": "Use explicit test function name matching the scenario from the feature file (loaded via pytest_bdd scenarios())"
+            }
+          ]
+        },
+        "context": {
+          "status": "COMPLETE",
+          "detail": "All context fields properly populated with correct references to project structure."
+        },
+        "test_isolation": {
+          "status": "VERIFIED",
+          "detail": "Test uses TestEnvironment fixture with isolated tmp_path - each test gets clean state."
+        },
+        "implementation_bias": {
+          "status": "NOT_APPLICABLE",
+          "detail": "Task is acceptance test creation (backwards compatibility verification), not feature implementation. No over-engineering concerns."
+        }
+      },
+      "summary": "Task file has critical issues with file paths and test command that will prevent execution. The actual step definitions and scenario already exist in the codebase. This task appears to be a verification task that should clarify its purpose: is it adding NEW step definitions, or verifying EXISTING ones work correctly?",
+      "blockers": [
+        "CRITICAL: Incorrect file path in files_to_modify",
+        "CRITICAL: Incorrect file path in test_command",
+        "HIGH: Unclear whether new steps are needed or existing ones should be used"
+      ],
+      "recommendations": [
+        {
+          "priority": "IMMEDIATE",
+          "action": "Update files_to_modify to reference actual file: tests/acceptance/steps/test_US002_directory_name_steps.py",
+          "rationale": "Current path does not exist. The actual file already contains all step definitions needed."
+        },
+        {
+          "priority": "IMMEDIATE",
+          "action": "Update test_command with correct file path and test function name",
+          "rationale": "Current command will fail with file not found error."
+        },
+        {
+          "priority": "HIGH",
+          "action": "Clarify task purpose in implementation_details and expected_outcome",
+          "detail": "Specify: Are we (a) ADDING new step definitions, (b) VERIFYING existing scenario works, or (c) TAGGING scenario as regression guard?",
+          "current_state": "Step definitions already exist (lines 68-76, 207-222, 286-293, 392-407, 400-407) and scenario exists in feature file (lines 30-37)"
+        },
+        {
+          "priority": "MEDIUM",
+          "action": "Add specific verification method for AC-1",
+          "detail": "How should a sub-agent verify 'Test covers Scenario'? Add: 'Verify step_defs file contains lines with all four step implementations matching feature file lines 32-37'"
+        },
+        {
+          "priority": "MEDIUM",
+          "action": "Update expected_outcome to clarify verification approach",
+          "detail": "Current: 'Test passes confirming existing dated prefix behavior works' - clarify HOW test demonstrates this (via assertion on generated_directory name matching YYYYMMDD pattern)"
+        }
+      ]
+    }
+  ]
+}

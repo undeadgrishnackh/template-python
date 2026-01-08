@@ -1,0 +1,99 @@
+{
+  "task_id": "02-01",
+  "phase": 2,
+  "phase_name": "US-003: IDE Opening Control",
+  "name": "acceptance_test_default_no_ide",
+  "description": "Create acceptance test verifying default behavior is no IDE launch. This ensures 5D-Wave agents and CI/CD pipelines work without interruption.",
+  "motivation": "Alex the 5D-Wave agent runs in headless automation. The previous VS Code launch (now removed) blocked pipelines. Default must be safe for automation.",
+  "estimated_hours": 0.5,
+  "dependencies": ["01-05"],
+  "files_to_modify": [
+    {
+      "path": "tests/acceptance/step_defs/test_us003_ide_opening_control_steps.py",
+      "action": "create_or_modify"
+    }
+  ],
+  "implementation_details": "Create pytest-bdd step definitions for US003 automation-safe scenarios in test_us003_ide_opening_control_steps.py. This implementation covers the Red phase of TDD - test file will fail because open_ide parameter not yet in cookiecutter.json.\n\n1. Feature File Reference:\n   File: tests/acceptance/features/US003_ide_opening_control.feature\n   Target Scenario: @happy-path @default-none @agentic-workflow \"Default behavior is no IDE for safe automation\" (lines 12-19)\n   Additional Scenarios: Explicit none parameter (lines 21-26) - also automation-safe\n\n2. Test Context Structure (use pattern from test_git_detection_steps.py):\n   - temp_dir: temporary directory for test isolation\n   - project_dir: directory where scaffold is generated\n   - hook_result: result of cookiecutter invocation\n   - subprocess_calls: captured subprocess.Popen/run calls for verification\n   - created_files: list of files created during scaffold\n   - error_message: captured error message if generation fails\n\n3. Given step: \"Alex is the 5D-Wave agent running in automated mode\"\n   - Set up test context simulating headless execution\n   - Patch subprocess.Popen and subprocess.run to track IDE launch attempts\n\n4. When step: \"Alex generates a scaffold with directory name {name}\"\n   - Invoke cookiecutter hook logic (post_gen_project.py) without specifying open_ide parameter\n   - Verify directory_name parameter is passed and processed\n\n5. And step: \"no IDE parameter is specified\"\n   - Verify open_ide is not in the cookiecutter context (defaults to None/undefined)\n\n6. Then steps:\n   - \"no IDE application launches\"\n     Assert subprocess_calls list is empty OR no calls matching 'code'|'pycharm' executables\n   - \"the terminal returns control to the calling process immediately\"\n     Assert hook completes without hanging, scaffold generation returns control\n   - \"Alex continues the automated workflow without interruption\"\n     Assert no blocking subprocess calls, process completes successfully\n\n7. Mocking Strategy:\n   - Use unittest.mock.patch('subprocess.Popen') and patch('subprocess.run')\n   - Track all IDE-related subprocess calls in test_context['subprocess_calls']\n   - Mock should allow test to verify no IDE launch occurred",
+  "acceptance_criteria": [
+    "test_us003_ide_opening_control_steps.py file created in tests/acceptance/step_defs/ directory",
+    "All step definitions for 'Default behavior is no IDE for safe automation' scenario implemented: Given 'Alex is 5D-Wave agent...', When 'Alex generates scaffold...', And 'no IDE parameter...', Then 'no IDE launches', Then 'terminal returns control', Then 'Alex continues workflow'",
+    "pytest-bdd scenarios() decorator loads US003_ide_opening_control.feature correctly",
+    "test_context fixture defined with: temp_dir, project_dir, hook_result, subprocess_calls, created_files, error_message",
+    "Test runs with: pytest tests/acceptance/step_defs/test_us003_ide_opening_control_steps.py -v -k 'default' --tb=short",
+    "Test FAILS in Red phase because open_ide parameter not yet in cookiecutter.json (expected behavior for TDD Red phase)",
+    "Subprocess mocking implemented using unittest.mock.patch to track IDE launch attempts",
+    "No syntax errors, imports resolve, pytest can discover and collect all steps"
+  ],
+  "test_command": "cd /Users/michele.brissoni/ProgettiGit/UndeadGrishnackh/_template_Python_ && pipenv run pytest tests/acceptance/step_defs/test_us003_ide_opening_control_steps.py -v -k 'default' --tb=short",
+  "expected_outcome": "Test fails because open_ide parameter not yet implemented",
+  "context": {
+    "project_id": "us-002-003-directory-ide-features",
+    "methodology": "outside_in_tdd",
+    "feature_file": "tests/acceptance/features/US003_ide_opening_control.feature",
+    "related_user_story": "US-003"
+  },
+  "state": {
+    "status": "pending",
+    "ready_for_execution": true
+  },
+  "reviews": [
+    {
+      "review_date": "2026-01-08",
+      "reviewer": "software-crafter-reviewer",
+      "review_scope": "Atomic task file completeness and clarity for sub-agent execution",
+      "findings": [
+        {
+          "category": "implementation_details_clarity",
+          "severity": "HIGH",
+          "status": "FIXED",
+          "issue": "Implementation details lacked explicit feature file references and scenario mapping",
+          "resolution": "Added detailed feature file reference with exact scenario location (lines 12-19) and additional automation-safe scenarios"
+        },
+        {
+          "category": "test_context_specification",
+          "severity": "HIGH",
+          "status": "FIXED",
+          "issue": "Test context structure not specified; sub-agent would need to infer from US001 example",
+          "resolution": "Explicitly documented test_context fixture structure with all required fields: temp_dir, project_dir, subprocess_calls, created_files, error_message"
+        },
+        {
+          "category": "mocking_strategy_clarity",
+          "severity": "MEDIUM",
+          "status": "FIXED",
+          "issue": "Implementation mentioned subprocess assertions but not the mocking approach",
+          "resolution": "Added explicit mocking strategy: unittest.mock.patch('subprocess.Popen') and patch('subprocess.run'), with test_context tracking"
+        },
+        {
+          "category": "acceptance_criteria_specificity",
+          "severity": "MEDIUM",
+          "status": "FIXED",
+          "issue": "Criteria were vague ('Test covers Scenario...'); lacked step-by-step implementation checkpoints",
+          "resolution": "Expanded to 8 specific, testable acceptance criteria with exact file locations, step names, expected behaviors, and test command verification"
+        },
+        {
+          "category": "tdd_phase_clarity",
+          "severity": "LOW",
+          "status": "FIXED",
+          "issue": "Task didn't explicitly frame this as TDD Red phase",
+          "resolution": "Added clarification: 'This implementation covers the Red phase of TDD - test file will fail because open_ide parameter not yet in cookiecutter.json'"
+        },
+        {
+          "category": "dependency_validation",
+          "severity": "LOW",
+          "status": "VALIDATED",
+          "issue": "Verified dependency 01-05 and feature file exist",
+          "resolution": "Confirmed: 01-05 exists (/docs/workflow/.../steps/01-05.json), Feature file exists (tests/acceptance/features/US003_ide_opening_control.feature), Dependency chain valid"
+        }
+      ],
+      "completeness_assessment": {
+        "implementation_details": "COMPLETE - Provides clear guidance for step definition creation with specific Given/When/And/Then steps, mocking approach, and test context structure",
+        "acceptance_criteria": "COMPLETE - 8 specific, testable criteria covering file creation, step implementation, feature loading, test context, test execution, expected failure in Red phase, mocking implementation, and syntax validation",
+        "dependencies": "VALID - Dependency 01-05 (refactor_us002_implementation) exists and precedes this task",
+        "test_command": "VALID - Command is specific and includes feature filter (-k 'default') for targeted test execution",
+        "context_for_execution": "COMPLETE - Sub-agent has sufficient context to: (1) Create new step file, (2) Implement test_context fixture following US001 pattern, (3) Create all Given/When/And/Then steps, (4) Configure subprocess mocking, (5) Understand expected Red phase failure"
+      },
+      "readiness_verdict": "READY_FOR_EXECUTION",
+      "rationale": "All critical information for sub-agent execution is present: clear feature file reference, detailed implementation steps, complete test context structure, explicit mocking strategy, specific acceptance criteria, and valid test command. The task is well-scoped (Red phase only) and unambiguous about expected outcome (test fails due to missing cookiecutter.json parameter)."
+    }
+  ]
+}

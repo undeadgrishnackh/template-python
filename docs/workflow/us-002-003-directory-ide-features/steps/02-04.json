@@ -1,0 +1,122 @@
+{
+  "task_id": "02-04",
+  "phase": 2,
+  "phase_name": "US-003: IDE Opening Control",
+  "name": "cookiecutter_json_add_open_ide_parameter",
+  "description": "Add open_ide parameter to cookiecutter.json with choices [none, vscode, pycharm]. Default must be 'none' for safe automation (first choice is default).",
+  "motivation": "Entry point for IDE control feature. Parameter in cookiecutter.json makes the option visible to users and accessible via command line.",
+  "estimated_hours": 0.25,
+  "dependencies": ["02-03"],
+  "files_to_modify": [
+    {
+      "path": "cookiecutter.json",
+      "action": "modify"
+    }
+  ],
+  "implementation_details": "CONTEXT: This step adds IDE control to cookiecutter.json. The file is located at: /Users/michele.brissoni/ProgettiGit/UndeadGrishnackh/_template_Python_/cookiecutter.json\n\nCURRENT STATE (after US-002 completion):\nThe cookiecutter.json contains base fields: kata_name, use_dated_prefix, directory_name, and possibly others. All existing fields MUST be preserved exactly as-is.\n\nTARGET CHANGE:\nAdd ONE new key-value pair to the root JSON object:\n  \"open_ide\": [\"none\", \"vscode\", \"pycharm\"]\n\nPLACEMENT: Can be added anywhere in the JSON object (order doesn't matter). Recommend adding after existing parameters for logical grouping.\n\nIMPORTANT NOTES:\n- First option in array (\"none\") becomes cookiecutter's default\n- JSON formatting must match existing file: 2-space indentation, no trailing commas\n- File must remain valid JSON (use json.tool for validation)\n- Parameter name is EXACTLY \"open_ide\" (case-sensitive)\n- Options are EXACTLY [\"none\", \"vscode\", \"pycharm\"] (no typos, exact spelling)\n\nEDGE CASES:\n- If \"open_ide\" key already exists: SKIP this step (idempotent)\n- If file is malformed: Restore from git before proceeding\n\nEXECUTION METHOD:\nDirect file editing recommended (use text editor or Python). Avoid tools that might reformat unrelated content.",
+  "acceptance_criteria": [
+    "AC-1: cookiecutter.json is valid JSON - python -m json.tool succeeds without errors",
+    "AC-2: 'open_ide' key exists in JSON root object (case-sensitive)",
+    "AC-3: 'open_ide' value is an array with exactly 3 elements: [\"none\", \"vscode\", \"pycharm\"]",
+    "AC-4: First element is 'none' (becomes cookiecutter default)",
+    "AC-5: All existing fields preserved - file size change is minimal (single key-value pair added)",
+    "AC-6: No trailing commas or other JSON syntax errors present",
+    "AC-7: Cookiecutter prompts include 'open_ide' when running 'cookiecutter .' interactively"
+  ],
+  "validation_command": "cd /Users/michele.brissoni/ProgettiGit/UndeadGrishnackh/_template_Python_ && python -c \"import json, sys; c=json.load(open('cookiecutter.json')); ide=c.get('open_ide'); assert ide==[\\'none\\', \\'vscode\\', \\'pycharm\\'], f\\'Expected [none, vscode, pycharm], got {ide}\\'; print(\\'PASS: open_ide parameter correct\\')\"",
+  "expected_outcome": "Script prints 'PASS: open_ide parameter correct' (validates JSON syntax, parameter existence, exact array contents, and correct default)",
+  "context": {
+    "project_id": "us-002-003-directory-ide-features",
+    "methodology": "outside_in_tdd",
+    "related_user_story": "US-003"
+  },
+  "state": {
+    "status": "pending",
+    "ready_for_execution": true
+  },
+  "reviews": [
+    {
+      "review_date": "2026-01-08",
+      "reviewer": "software-crafter-reviewer",
+      "focus_areas_reviewed": [
+        "implementation_details_completeness",
+        "acceptance_criteria_clarity",
+        "dependencies_specification",
+        "test_command_validation",
+        "execution_context_sufficiency"
+      ],
+      "findings": {
+        "implementation_details": {
+          "status": "IMPROVED",
+          "issues_found": [
+            "Missing context about current cookiecutter.json location",
+            "No explanation of indentation/formatting requirements",
+            "No guidance on edge cases (parameter already exists)",
+            "Missing rollback instructions"
+          ],
+          "fixes_applied": [
+            "Added full path to cookiecutter.json file",
+            "Documented formatting requirements (2-space indentation, no trailing commas)",
+            "Added edge case handling (idempotent behavior if parameter exists)",
+            "Added rollback instruction (restore from git if malformed)",
+            "Clarified that parameter placement doesn't matter but grouping is recommended"
+          ]
+        },
+        "acceptance_criteria": {
+          "status": "IMPROVED",
+          "issues_found": [
+            "Criteria were too vague (e.g., 'parses without errors' unclear on method)",
+            "Missing specific validation methods",
+            "No check for preventing typos or extra options",
+            "Missing verification of default being 'none'"
+          ],
+          "fixes_applied": [
+            "Converted to 7 numbered AC with explicit test methods",
+            "Added AC-1: python -m json.tool success requirement",
+            "Added AC-3: Exact array contents validation [none, vscode, pycharm]",
+            "Added AC-5: Field preservation check",
+            "Added AC-7: Interactive cookiecutter prompt verification"
+          ]
+        },
+        "validation_command": {
+          "status": "SIGNIFICANTLY_IMPROVED",
+          "issues_found": [
+            "Original command only printed parameter value, didn't validate",
+            "Didn't verify array contents",
+            "Didn't confirm default value",
+            "Didn't check JSON syntax comprehensively"
+          ],
+          "fixes_applied": [
+            "New command validates JSON syntax (json.load succeeds)",
+            "Asserts exact array contents: ['none', 'vscode', 'pycharm']",
+            "Verifies parameter exists and has correct value",
+            "Returns PASS/FAIL result for clear validation status"
+          ]
+        },
+        "execution_context": {
+          "status": "IMPROVED",
+          "issues_found": [
+            "No explanation of why dependency on 02-03 exists",
+            "Missing guidance on execution method (manual edit vs automated)",
+            "No mention of file location",
+            "No edge case handling instructions"
+          ],
+          "fixes_applied": [
+            "Added context section explaining parameter's role in IDE control feature",
+            "Recommended direct file editing (text editor or Python)",
+            "Added absolute path to cookiecutter.json",
+            "Added idempotent behavior guidance (skip if already exists)"
+          ]
+        },
+        "dependencies": {
+          "status": "VALID",
+          "details": "Dependency on 02-03 is correct - US-002 must establish base cookiecutter.json structure before adding new parameters"
+        }
+      },
+      "overall_assessment": "READY_FOR_EXECUTION",
+      "confidence_level": "high",
+      "notes": "Step is now self-contained and executable. Executor has: (1) Clear understanding of what to change, (2) Exact file path, (3) Precise expected contents, (4) Comprehensive validation script, (5) Edge case handling, (6) Rollback instructions. All 5 focus areas addressed and improved.",
+      "recommendation": "Proceed to execution phase. Task is well-specified and ready for sub-agent or manual implementation."
+    }
+  ]
+}

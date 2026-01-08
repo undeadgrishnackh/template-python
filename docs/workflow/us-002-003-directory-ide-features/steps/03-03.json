@@ -1,0 +1,78 @@
+{
+  "task_id": "03-03",
+  "phase": 3,
+  "phase_name": "Integration Verification and Documentation",
+  "name": "update_readme_documentation",
+  "description": "Update README.md to document new cookiecutter parameters: use_dated_prefix (US-002) and open_ide (US-003). Only applies if both features are fully implemented and tested.",
+  "motivation": "Users need to know about new features. Documentation enables adoption and reduces support questions.",
+  "estimated_hours": 0.5,
+  "dependencies": ["03-02"],
+  "files_to_modify": [
+    {
+      "path": "README.md",
+      "action": "modify_if_exists"
+    },
+    {
+      "path": "cookiecutter.json",
+      "action": "verify_parameters_exist"
+    }
+  ],
+  "implementation_details": "CRITICAL: Before proceeding, verify both parameters exist in cookiecutter.json:\n- use_dated_prefix: Controls whether to add date prefix to directory name\n- open_ide: Controls which IDE opens after generation (none, vscode, pycharm)\n\nIf parameters missing from cookiecutter.json, this task cannot proceed.\n\nIf parameters exist, update README.md with new section:\n\n## Configuration Parameters\n\nThe cookiecutter supports the following parameters:\n\n| Parameter | Default | Options | Description |\n|-----------|---------|---------|-------------|\n| kata_name | DummyKata | string | Name for the kata/project |\n| use_dated_prefix | yes (if implemented) | yes, no | Add YYYYMMDD prefix to directory name |\n| directory_name | Generated | string | Override auto-generated directory name |\n| open_ide | none (if implemented) | none, vscode, pycharm | IDE to open after generation |\n\n## Usage Examples\n\n### Standard kata (dated prefix, no IDE):\n```bash\ncookiecutter gh:undeadgrishnackh/_template_Python_\n```\n\n### Clean directory for monorepo integration:\n```bash\ncookiecutter gh:undeadgrishnackh/_template_Python_ \\\n  use_dated_prefix=no \\\n  kata_name=trading-engine\n```\n\n### Interactive development with VS Code:\n```bash\ncookiecutter gh:undeadgrishnackh/_template_Python_ \\\n  open_ide=vscode\n```\n\n### 5D-Wave agent usage (automation safe):\n```bash\ncookiecutter gh:undeadgrishnackh/_template_Python_ \\\n  use_dated_prefix=no \\\n  kata_name=source\n# No IDE opens, terminal returns control immediately\n```",
+  "test_command": "cd /Users/michele.brissoni/ProgettiGit/UndeadGrishnackh/_template_Python_ && grep -E '(use_dated_prefix|open_ide)' cookiecutter.json && grep -E '(Configuration Parameters|use_dated_prefix|open_ide)' README.md",
+  "acceptance_criteria": [
+    "README updated with new Parameters section",
+    "All four parameter types documented (kata_name, use_dated_prefix, directory_name, open_ide)",
+    "All four usage examples provided",
+    "Parameters exist in cookiecutter.json before documentation added",
+    "Test command verifies both cookiecutter.json and README contain new parameters"
+  ],
+  "expected_outcome": "README documents new parameters and usage examples; cookiecutter.json contains use_dated_prefix and open_ide",
+  "prerequisite_check": "This task can only execute after US-002 and US-003 features are fully implemented and integrated (verified by passing 03-02 regression test). If parameters missing from cookiecutter.json, escalate with message: 'Parameters use_dated_prefix and open_ide not found in cookiecutter.json - US-002 and US-003 implementation may be incomplete.'",
+  "context": {
+    "project_id": "us-002-003-directory-ide-features",
+    "methodology": "outside_in_tdd",
+    "related_user_story": "US-002, US-003"
+  },
+  "reviews": [
+    {
+      "reviewer": "software-crafter-reviewer",
+      "review_date": "2026-01-08",
+      "findings": [
+        {
+          "severity": "critical",
+          "category": "implementation_incomplete",
+          "issue": "Implementation details reference parameters (use_dated_prefix, open_ide) that do not exist in cookiecutter.json. Current cookiecutter.json only contains 'kata_name' and 'directory_name'.",
+          "evidence": "Examined cookiecutter.json - parameters use_dated_prefix and open_ide are missing.",
+          "recommendation": "Add prerequisite_check field to verify parameters exist before documentation is created. Updated implementation_details to include this check. Task should escalate if parameters not found."
+        },
+        {
+          "severity": "high",
+          "category": "test_command_missing",
+          "issue": "No test_command field provided to verify documentation changes or parameter existence.",
+          "evidence": "Task file lacks test_command required for execution validation.",
+          "recommendation": "Added test_command that verifies both cookiecutter.json contains parameters AND README documents them. This enables verification without manual inspection."
+        },
+        {
+          "severity": "high",
+          "category": "acceptance_criteria_clarity",
+          "issue": "Acceptance criteria too vague ('Both features documented'). Criteria must be testable by automated command.",
+          "evidence": "Original AC are aspirational rather than measurable.",
+          "recommendation": "Expanded AC to be specific and measurable: 'Parameters exist in cookiecutter.json', 'All four parameter types documented', 'All four usage examples provided', 'Test command verifies both sources'."
+        },
+        {
+          "severity": "medium",
+          "category": "missing_context",
+          "issue": "Task assumes features already implemented but hooks show no IDE opening or use_dated_prefix logic.",
+          "evidence": "post_gen_project.py and pre_gen_project.py examined - no open_ide or use_dated_prefix logic present. cookiecutter.json unchanged from original template.",
+          "recommendation": "Added 'prerequisite_check' section explaining this task only executes after 03-02 passes AND features fully implemented. Provides clear escalation path if features incomplete."
+        }
+      ],
+      "assessment": "CRITICAL ISSUES FOUND - Ready for execution only after parameters added to cookiecutter.json by US-002 and US-003 implementation."
+    }
+  ],
+  "state": {
+    "status": "pending",
+    "ready_for_execution": false,
+    "execution_blocker": "Parameters use_dated_prefix and open_ide must exist in cookiecutter.json before this documentation task can execute. Verify US-002 and US-003 implementation complete and integrated."
+  }
+}

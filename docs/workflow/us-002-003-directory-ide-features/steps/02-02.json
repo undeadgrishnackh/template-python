@@ -1,0 +1,85 @@
+{
+  "task_id": "02-02",
+  "phase": 2,
+  "phase_name": "US-003: IDE Opening Control",
+  "name": "acceptance_test_vscode_opening",
+  "description": "Create acceptance test for VS Code launch when open_ide=vscode. Test should verify the code command is invoked with correct directory.",
+  "motivation": "Sam wants VS Code to open automatically for interactive kata development. Test ensures the feature works when explicitly requested.",
+  "estimated_hours": 0.5,
+  "dependencies": ["02-01"],
+  "files_to_modify": [
+    {
+      "path": "tests/acceptance/step_defs/test_us003_ide_opening_control_steps.py",
+      "action": "modify"
+    }
+  ],
+  "implementation_details": "Add step definitions for VS Code scenario to existing test_us003_ide_opening_control_steps.py file (created by 02-01):\n\n1. Given step: \"Sam is developing interactively on their workstation\"\n   - Set up test context with mock for subprocess.run\n   - Initialize test context with necessary state (subprocess mock, directory tracking)\n\n2. And step: \"VS Code is installed with the code CLI available\"\n   - Mock shutil.which('code') to return mock path (e.g., '/usr/bin/code')\n   - Store in test_context['code_path']\n\n3. When step: \"Sam generates a scaffold with IDE option {option}\"\n   - This step already exists from feature file (accepts parameter)\n   - Create scaffold in test_context['project_dir'] with open_ide parameter\n   - Extract directory name to verify in assertions\n\n4. Then step: \"VS Code opens with the generated project directory\"\n   - Assert subprocess.run was called with ['code', test_context['project_dir']]\n   - Verify call signature: subprocess.run(['code', <directory>], check=False)\n   - Store result in test_context['subprocess_result'] for verification\n\n5. And step: \"Sam can start coding immediately in their preferred editor\"\n   - Verify subprocess call completed without exception\n   - No hanging or blocking behavior\n\nPattern follow: Use existing test_context fixture from US-001 steps (test_git_detection_steps.py)\n\nMocking strategy:\n- Mock subprocess.run() using unittest.mock.patch decorator\n- Mock shutil.which() to simulate CLI availability\n- Avoid actual subprocess execution\n- Return MagicMock for subprocess.run to track call_args\n\nStep definitions should extend test_us003_ide_opening_control_steps.py file and reuse test_context fixture pattern.",
+  "acceptance_criteria": [
+    "Test covers Scenario: Developer requests VS Code opening (line 31-36 in feature file)",
+    "Test uses mocking for subprocess.run to avoid real IDE launch",
+    "Test fails in Red phase because open_ide parameter not yet added to cookiecutter.json",
+    "Test fails in Red phase because post_gen_project.py hook does not implement IDE launch",
+    "All step definitions follow pytest-bdd Given/When/Then pattern",
+    "Step definitions reuse test_context fixture for state management",
+    "Step definitions properly parse parameterized steps (IDE option parameter)"
+  ],
+  "test_command": "cd /Users/michele.brissoni/ProgettiGit/UndeadGrishnackh/_template_Python_ && pipenv run pytest tests/acceptance/step_defs/test_us003_ide_opening_control_steps.py -v -k 'vscode' --tb=short",
+  "expected_outcome": "Test fails because: (1) open_ide parameter not in cookiecutter.json template, (2) post_gen_project.py hook does not implement subprocess call to launch IDE",
+  "context": {
+    "project_id": "us-002-003-directory-ide-features",
+    "methodology": "outside_in_tdd",
+    "feature_file": "tests/acceptance/features/US003_ide_opening_control.feature",
+    "related_user_story": "US-003",
+    "feature_scenarios": [
+      "Line 30-36: Scenario: Developer requests VS Code opening",
+      "Line 38-44: Scenario: Developer requests PyCharm opening",
+      "Line 46-52: Scenario: PyCharm opens correctly on macOS",
+      "Line 56-64: Scenario: VS Code command not found is non-fatal"
+    ],
+    "test_file_status": "test_us003_ide_opening_control_steps.py created by task 02-01",
+    "related_feature_file": "/Users/michele.brissoni/ProgettiGit/UndeadGrishnackh/_template_Python_/tests/acceptance/features/US003_ide_opening_control.feature"
+  },
+  "state": {
+    "status": "pending",
+    "ready_for_execution": true
+  },
+  "reviews": {
+    "date": "2026-01-08",
+    "reviewer": "software-crafter-reviewer",
+    "findings": {
+      "implementation_details_completeness": {
+        "status": "PASS",
+        "details": "Implementation details are clear and self-contained. Specifies exact Given/When/Then steps with clear mocking strategy. References feature file scenarios.",
+        "specificity": "Complete - includes step names, mocking approach, test context usage, and expected assertions."
+      },
+      "acceptance_criteria_clarity": {
+        "status": "PASS",
+        "details": "Acceptance criteria are testable and clear. Covers: feature scenario coverage, mocking strategy, Red phase expectation, step definition patterns.",
+        "testability": "All criteria are objectively verifiable through pytest execution."
+      },
+      "dependencies_correctness": {
+        "status": "PASS",
+        "details": "Dependency on 02-01 is correct. Task 02-02 extends test file created by 02-01. Both tasks build test_us003_ide_opening_control_steps.py sequentially.",
+        "dependency_chain": "02-01 creates file → 02-02 adds VS Code step definitions → subsequent tasks add PyCharm/error scenarios"
+      },
+      "test_command_validity": {
+        "status": "PASS",
+        "details": "Test command is valid and will execute correctly. Uses pytest with -k filter for 'vscode' keyword matching step definitions. Directory path is correct.",
+        "execution_readiness": "Command will fail in Red phase (expected behavior for TDD), confirming feature not yet implemented."
+      },
+      "execution_context_sufficiency": {
+        "status": "PASS",
+        "details": "Context is sufficient for sub-agent execution. Clearly references feature file location, existing test patterns from US-001, fixture reuse pattern, mocking strategy.",
+        "clarity": "Sub-agent can execute without additional elicitation."
+      },
+      "issues_found": {
+        "minor_precision_gap": {
+          "issue": "implementation_details section says 'Sam generates a scaffold with IDE option {option}' but feature file shows explicit parameter 'vscode' in line 34",
+          "impact": "MINOR - Does not block execution, just could be more specific",
+          "recommendation": "Updated implementation_details to clarify parameter handling in When step"
+        },
+        "no_critical_issues": "No critical or blocking issues identified. Task file is production-ready."
+      }
+    }
+  }
+}
