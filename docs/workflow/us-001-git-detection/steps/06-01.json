@@ -1,0 +1,98 @@
+{
+  "task_id": "06-01",
+  "phase": 6,
+  "step": 1,
+  "name": "Create step definitions for acceptance tests",
+  "description": "Implement pytest-bdd step definitions for the Gherkin scenarios in US001_git_repository_detection.feature.",
+  "motivation": "Enable acceptance test execution with step implementations. Step definitions connect Gherkin scenarios to actual test code.",
+  "context": {
+    "files_to_read": [
+      "tests/acceptance/features/US001_git_repository_detection.feature",
+      "hooks/post_gen_project.py"
+    ],
+    "files_to_modify": [],
+    "files_to_create": [
+      "tests/acceptance/step_defs/test_git_detection_steps.py"
+    ],
+    "prerequisites": [
+      "Step 05-02 completed (post_gen_project.py refactored with conditional logic)"
+    ],
+    "reference_documents": []
+  },
+  "instructions": [
+    "1. Create the step definitions directory if it doesn't exist:",
+    "   mkdir -p tests/acceptance/step_defs",
+    "",
+    "2. Create tests/acceptance/step_defs/__init__.py (empty file)",
+    "",
+    "3. Create tests/acceptance/step_defs/test_git_detection_steps.py with step definitions for ALL 11 scenarios:",
+    "",
+    "CRITICAL REQUIREMENTS:",
+    "- Import scenarios() and load from feature file: scenarios('features/US001_git_repository_detection.feature')",
+    "- Create test_context fixture with function scope to isolate scenario state",
+    "- Implement ALL Given/When/Then steps for 11 scenarios (3 happy path, 4 edge case, 3 error, 1 background)",
+    "- Use parsers.parse() for parameterized steps: {persona}, {directory_name}, {service_name}, {kata_name}, {branch_name}",
+    "- Step definitions must call actual post_gen_project.is_inside_git_repo() function (prerequisite 05-02)",
+    "- Happy path steps (priority): Agent detection, monorepo detection, standalone mode",
+    "- Edge case steps: Git worktree (.git file), filesystem root, symlinks, branch preservation",
+    "- Error steps: Permission denied handling, gh-cli failure, missing git",
+    "",
+    "STEP IMPLEMENTATION SCOPE:",
+    "- Background Given: 'the cookiecutter template is available' - verify cookiecutter.json exists",
+    "- Happy path Given: '{persona} is/working in {directory_type}', 'existing/no git repository' variations",
+    "- Happy path When: '{persona} generates Python scaffold with directory name \\\"{name}\\\"'",
+    "- Happy path Then: 'hook detects/skips repository', 'installs dependencies', 'creates validation commit'",
+    "- Edge case Given: 'worktree with .git file', 'near filesystem root', 'symlinked directory', 'feature branch'",
+    "- Edge case Then: 'hook resolves symlink', 'hook does not change branch', 'traverses parent directories'",
+    "- Error case Given: 'restricted read permissions', 'GitHub CLI not authenticated', 'git not installed'",
+    "- Error case Then: 'hook fails with clear error', 'error message includes remediation', 'fails before file modification'",
+    "",
+    "FIXTURE MANAGEMENT:",
+    "- test_context fixture: function scope, initialize empty dict with keys: temp_dir, project_dir, git_repo_path, hook_result, hook_output, created_files, branch_name",
+    "- Use tmp_path fixture (pytest built-in) for temporary directories",
+    "- Properly resolve template path: Path(__file__).parent.parent.parent / 'cookiecutter.json'",
+    "",
+    "FUNCTION AVAILABILITY:",
+    "- post_gen_project.is_inside_git_repo() exists (from prerequisite 05-02)",
+    "- Call with os.chdir() to project directory context",
+    "- Store result in test_context['hook_result']",
+    "",
+    "4. Verify step definitions can be collected:",
+    "   pipenv run pytest tests/acceptance/features/US001_git_repository_detection.feature --collect-only",
+    "",
+    "5. Expected collection: All 11 scenarios should be listed as collected tests"
+  ],
+  "acceptance_criteria": [
+    "Step definitions file created at tests/acceptance/step_defs/test_git_detection_steps.py with scenarios() import from feature file",
+    "Background steps implemented: 'cookiecutter template is available'",
+    "Happy path steps (3 scenarios): Agent detection, monorepo traversal, standalone mode with all Given/When/Then",
+    "Edge case steps (4 scenarios): Worktree, filesystem root, symlinks, branch preservation with all Given/When/Then",
+    "Error scenario steps (3 scenarios): Permission denied, gh-cli failure, missing git with all Given/When/Then",
+    "test_context fixture created with function scope and all required keys initialized",
+    "Parameterized steps use parsers.parse() for {persona}, {directory_name}, {service_name}, {kata_name}, {branch_name}",
+    "Steps call actual post_gen_project.is_inside_git_repo() function from prerequisite 05-02",
+    "All 11 scenarios collected by pytest (pipenv run pytest tests/acceptance/features/US001_git_repository_detection.feature --collect-only shows 11 tests)",
+    "File has proper imports: pytest, pytest_bdd (given, when, then, parsers, scenarios), os, subprocess, pathlib, tempfile"
+  ],
+  "verification": {
+    "command": "pipenv run pytest tests/acceptance/features/US001_git_repository_detection.feature --collect-only -q",
+    "expected_output": "11 tests collected (one per scenario)",
+    "validation_steps": [
+      "1. Verify file exists: test -f tests/acceptance/step_defs/test_git_detection_steps.py",
+      "2. Verify __init__.py exists: test -f tests/acceptance/step_defs/__init__.py",
+      "3. Run collection: pipenv run pytest tests/acceptance/features/US001_git_repository_detection.feature --collect-only",
+      "4. Confirm output includes all 11 scenario names",
+      "5. Run a single scenario to verify step implementations work: pipenv run pytest tests/acceptance/features/US001_git_repository_detection.feature::US-001 -v"
+    ]
+  },
+  "estimated_minutes": 90,
+  "dependencies": [
+    "05-02"
+  ],
+  "state": {
+    "status": "pending",
+    "ready_for_execution": false,
+    "blocking_issue": "post_gen_project.py must have is_inside_git_repo() function implemented (prerequisite 05-02)"
+  },
+  "agent_notes": "Full implementation required - all 11 scenarios need step definitions. Simplified template in previous instructions was incomplete. Implementation must handle: happy path (3 scenarios), edge cases (4 scenarios), error handling (3 scenarios), plus background. Each scenario has 4-8 steps requiring implementation. Use parameterized steps for persona/directory names/branch names. Estimated 90 minutes for complete implementation with proper error handling and all variations."
+}

@@ -1,0 +1,92 @@
+{
+  "task_id": "07-02",
+  "phase": 7,
+  "step": 2,
+  "name": "Final commit",
+  "description": "Create a well-documented commit for the US-001 implementation. Include references to user story and ADR.",
+  "motivation": "Create traceable commit for the feature with proper conventional commit message referencing user story, ADR, and acceptance criteria.",
+  "context": {
+    "files_to_read": [
+      "docs/workflow/us-001-git-detection/roadmap.yaml",
+      "docs/architecture/adrs/ADR-001-git-detection-algorithm.md"
+    ],
+    "files_to_modify": [],
+    "files_to_create": [],
+    "prerequisites": [
+      "Step 07-01 completed (code quality check passed)",
+      "All tests passing",
+      "All files formatted and linted",
+      "All changes staged and ready to commit"
+    ],
+    "reference_documents": [
+      "docs/workflow/us-001-git-detection/roadmap.yaml (contains US-001 definition)",
+      "docs/architecture/adrs/ADR-001-git-detection-algorithm.md"
+    ],
+    "files_to_commit": [
+      "hooks/post_gen_project.py",
+      "tests/unit/test_git_detection.py",
+      "tests/acceptance/step_defs/test_git_detection_steps.py"
+    ]
+  },
+  "instructions": [
+    "1. Stage all changes:",
+    "   git add hooks/post_gen_project.py",
+    "   git add tests/unit/test_git_detection.py",
+    "   git add tests/acceptance/step_defs/test_git_detection_steps.py",
+    "",
+    "2. Create commit with conventional commit message using HEREDOC format:",
+    "   git commit -m \"$(cat <<'EOF'",
+    "feat(hooks): add smart git repository detection",
+    "",
+    "Implements US-001: Smart Git Repository Detection",
+    "",
+    "- Add is_inside_git_repo() function using pathlib.Path traversal",
+    "- Refactor post_gen_project.py into modular functions",
+    "- Skip repository creation when inside existing git repo",
+    "- Preserve backwards compatibility for standalone kata creation",
+    "- Remove hardcoded VS Code launch for CI/CD compatibility",
+    "",
+    "Acceptance Criteria:",
+    "- AC-001: Parent directory traversal implemented",
+    "- AC-002: Detection works at any parent level",
+    "- AC-003: .git file detection (worktrees) supported",
+    "- AC-004: Repository creation skipped in integration mode",
+    "- AC-005: Environment setup always executes",
+    "- AC-006: Validation commit always executes",
+    "- AC-007: Clean directory triggers full git init",
+    "",
+    "Reference: ADR-001-git-detection-algorithm.md",
+    "Closes: US-COOKIECUTTER-GIT-2026-001",
+    "EOF",
+    ")\"",
+    "",
+    "3. Verify commit was created with proper message:",
+    "   git log --format='%h %s' -1",
+    "",
+    "4. Verify commit contains expected content:",
+    "   git log -1 --format='%B' | grep -q 'US-001' && echo 'US-001 reference found'",
+    "   git log -1 --format='%B' | grep -q 'AC-001' && echo 'AC-001 reference found'",
+    "   git log -1 --format='%B' | grep -q 'ADR-001' && echo 'ADR-001 reference found'"
+  ],
+  "acceptance_criteria": [
+    "Commit message follows conventional commits format (feat(hooks): ...)",
+    "Commit message references user story (US-001) - verified by grep",
+    "Commit message references ADR (ADR-001) - verified by grep",
+    "All acceptance criteria listed in commit message (AC-001 through AC-007)",
+    "All modified files staged and committed (hooks/post_gen_project.py, tests/unit/test_git_detection.py, tests/acceptance/step_defs/test_git_detection_steps.py)",
+    "Commit created successfully (git returns 0 exit code)"
+  ],
+  "verification": {
+    "command": "git log -1 --format='%B' | grep -E '(US-001|AC-001|ADR-001)' && git log --oneline -1",
+    "expected": "Output contains all references (US-001, AC-001, ADR-001) and oneline format shows feat(hooks) message"
+  },
+  "estimated_minutes": 5,
+  "dependencies": [
+    "07-01"
+  ],
+  "state": {
+    "status": "pending",
+    "ready_for_execution": false
+  },
+  "agent_notes": "This commit completes US-001. The feature is ready for integration into the main branch after code review. CRITICAL: Ensure files are staged BEFORE executing step. Dependencies require 07-01 to pass all code quality checks. The HEREDOC format is essential for multi-line commit messages to work correctly with git."
+}

@@ -1,0 +1,1278 @@
+# Roadmap: US-001 Smart Git Repository Detection
+# Type: implementation_roadmap
+# Generated: 2026-01-08
+# Agent: Morgan (Solution Architect)
+# Methodology: Outside-In TDD
+
+project_id: us-001-git-detection
+roadmap_version: "1.0"
+status: ready_for_execution
+
+# =============================================================================
+# EXECUTIVE SUMMARY
+# =============================================================================
+summary:
+  goal: |
+    Implement smart git repository detection in post_gen_project.py to skip
+    repository creation when running inside existing git repositories while
+    preserving backwards compatibility for standalone kata creation.
+
+  approach: Outside-In TDD
+  estimated_effort: 4-5 hours
+  total_phases: 7
+  total_steps: 16
+
+  key_deliverables:
+    - "is_inside_git_repo() function using pathlib.Path traversal"
+    - "Refactored post_gen_project.py with conditional git operations"
+    - "Unit tests for git detection function"
+    - "All 11 acceptance tests passing"
+
+# =============================================================================
+# ARCHITECTURE REFERENCE
+# =============================================================================
+architecture_reference:
+  document: docs/architecture/architecture.md
+  adr: docs/architecture/adrs/ADR-001-git-detection-algorithm.md
+  status: APPROVED
+
+  algorithm_specification: |
+    from pathlib import Path
+
+    def is_inside_git_repo() -> bool:
+        current = Path.cwd()
+        while current != current.parent:
+            if (current / ".git").exists():
+                return True
+            current = current.parent
+        return (current / ".git").exists()
+
+  operations_to_skip_when_inside_repo:
+    - "gh repo create {kata_name} --private"
+    - "git init"
+    - "git remote add origin"
+    - "git branch -M main"
+    - "git push -u origin main"
+
+  operations_to_always_run:
+    - "pipenv install --dev"
+    - "pipenv run forceTypingExtensions"
+    - "pipenv run tests"
+    - "pipenv run install_pre_hooks"
+    - "git add --all"
+    - "git commit -m 'feat: add Python source scaffolding'"
+
+# =============================================================================
+# PHASE 1: FOUNDATION
+# =============================================================================
+phases:
+  - phase_id: "1"
+    name: "Foundation"
+    description: "Set up test infrastructure and verify existing tests"
+    estimated_time: "15 minutes"
+
+    steps:
+      - step_id: "1.1"
+        name: "Create unit test file for git detection"
+        description: |
+          Create the unit test file structure for the is_inside_git_repo() function.
+          This follows TDD - tests are written before implementation.
+
+        objective: "Establish test file structure for git detection module"
+
+        inputs:
+          - "hooks/post_gen_project.py (current implementation for reference)"
+
+        outputs:
+          - "tests/unit/test_git_detection.py (new file)"
+
+        implementation: |
+          Create file: tests/unit/test_git_detection.py
+
+          Content:
+          ```python
+          """Unit tests for git repository detection.
+
+          Tests the is_inside_git_repo() function that detects whether
+          the current working directory is inside a git repository.
+
+          Reference: ADR-001-git-detection-algorithm.md
+          """
+          import pytest
+          from pathlib import Path
+          from unittest.mock import patch, MagicMock
+
+          # Import will fail until implementation exists - this is expected in TDD
+          # from hooks.post_gen_project import is_inside_git_repo
+
+
+          class TestIsInsideGitRepo:
+              """Test suite for is_inside_git_repo() function."""
+
+              # Tests will be added in subsequent steps
+              pass
+          ```
+
+        verification:
+          command: "ls -la tests/unit/test_git_detection.py"
+          expected: "File exists"
+
+        acceptance_criteria:
+          - "test_git_detection.py file created in tests/unit/"
+          - "File contains proper module docstring"
+          - "File imports pytest and pathlib"
+
+        dependencies: []
+
+        agent_notes: |
+          This is a TDD setup step. The import of is_inside_git_repo will fail
+          until Phase 3 when we implement the function. This is expected behavior.
+
+      - step_id: "1.2"
+        name: "Verify acceptance test framework"
+        description: |
+          Ensure pytest-bdd is configured and acceptance tests can be discovered.
+          Run the existing acceptance tests to establish baseline (should fail).
+
+        objective: "Confirm acceptance test infrastructure is operational"
+
+        inputs:
+          - "tests/acceptance/features/US001_git_repository_detection.feature"
+          - "Pipfile (dev dependencies)"
+
+        outputs:
+          - "Verification that pytest-bdd discovers feature file"
+          - "Baseline test results (expected failures)"
+
+        implementation: |
+          1. Verify pytest-bdd is installed:
+             pipenv run pip list | grep pytest-bdd
+
+          2. Run acceptance test discovery:
+             pipenv run pytest tests/acceptance/ --collect-only
+
+          3. Run acceptance tests (expect failures - no step definitions yet):
+             pipenv run pytest tests/acceptance/ -v --tb=short 2>&1 | head -50
+
+        verification:
+          command: "pipenv run pytest tests/acceptance/ --collect-only 2>&1 | grep -c 'test session starts\\|no tests ran\\|feature'"
+          expected: "Test discovery runs without framework errors"
+
+        acceptance_criteria:
+          - "pytest-bdd is available in dev dependencies"
+          - "Feature file is discovered by pytest"
+          - "Framework errors (if any) are identified"
+
+        dependencies:
+          - "1.1"
+
+        agent_notes: |
+          Acceptance tests may not have step definitions yet. The goal is to
+          verify the framework can find and attempt to run the feature file.
+          Failures due to missing step definitions are expected at this stage.
+
+  # =============================================================================
+  # PHASE 2: UNIT TESTS - RED PHASE
+  # =============================================================================
+  - phase_id: "2"
+    name: "Unit Tests - Red Phase"
+    description: "Write unit tests for is_inside_git_repo() before implementation"
+    estimated_time: "45 minutes"
+
+    steps:
+      - step_id: "2.1"
+        name: "Write tests for .git detection in current and parent directories"
+        description: |
+          Write unit tests for the core detection scenarios:
+          - .git directory in current directory
+          - .git directory in parent directory (1-3 levels up)
+          - .git file (worktree) detection
+
+        objective: "Create comprehensive unit tests for positive detection cases"
+
+        inputs:
+          - "tests/unit/test_git_detection.py (from step 1.1)"
+          - "ADR-001 algorithm specification"
+
+        outputs:
+          - "Updated tests/unit/test_git_detection.py with detection tests"
+
+        implementation: |
+          Add to tests/unit/test_git_detection.py:
+
+          ```python
+          class TestIsInsideGitRepo:
+              """Test suite for is_inside_git_repo() function."""
+
+              def test_detects_git_directory_in_current_directory(self, tmp_path, monkeypatch):
+                  """AC-001: Detection works for .git in current directory."""
+                  # Arrange
+                  git_dir = tmp_path / ".git"
+                  git_dir.mkdir()
+                  monkeypatch.chdir(tmp_path)
+
+                  # Act
+                  result = is_inside_git_repo()
+
+                  # Assert
+                  assert result is True
+
+              def test_detects_git_directory_in_parent_directory(self, tmp_path, monkeypatch):
+                  """AC-002: Detection works for .git at any parent level."""
+                  # Arrange - .git 2 levels up
+                  git_dir = tmp_path / ".git"
+                  git_dir.mkdir()
+                  nested_dir = tmp_path / "level1" / "level2"
+                  nested_dir.mkdir(parents=True)
+                  monkeypatch.chdir(nested_dir)
+
+                  # Act
+                  result = is_inside_git_repo()
+
+                  # Assert
+                  assert result is True
+
+              def test_detects_git_directory_three_levels_up(self, tmp_path, monkeypatch):
+                  """AC-002: Detection works for .git 3+ levels up (monorepo scenario)."""
+                  # Arrange - .git 3 levels up
+                  git_dir = tmp_path / ".git"
+                  git_dir.mkdir()
+                  nested_dir = tmp_path / "services" / "trading" / "source"
+                  nested_dir.mkdir(parents=True)
+                  monkeypatch.chdir(nested_dir)
+
+                  # Act
+                  result = is_inside_git_repo()
+
+                  # Assert
+                  assert result is True
+
+              def test_detects_git_file_for_worktree(self, tmp_path, monkeypatch):
+                  """AC-003: Detection works for .git file (worktrees, submodules)."""
+                  # Arrange - .git as file (worktree format)
+                  git_file = tmp_path / ".git"
+                  git_file.write_text("gitdir: /path/to/actual/git/dir")
+                  monkeypatch.chdir(tmp_path)
+
+                  # Act
+                  result = is_inside_git_repo()
+
+                  # Assert
+                  assert result is True
+          ```
+
+        verification:
+          command: "pipenv run pytest tests/unit/test_git_detection.py -v 2>&1 | tail -20"
+          expected: "Tests fail with ImportError or NameError (function not implemented)"
+
+        acceptance_criteria:
+          - "4 test methods for positive detection cases"
+          - "Tests use pytest fixtures (tmp_path, monkeypatch)"
+          - "Tests follow Arrange-Act-Assert pattern"
+          - "Tests have docstrings linking to acceptance criteria"
+          - "All tests fail (Red phase - function not implemented)"
+
+        dependencies:
+          - "1.1"
+
+        agent_notes: |
+          These tests MUST fail at this point. We're in the Red phase of TDD.
+          The is_inside_git_repo function doesn't exist yet.
+
+      - step_id: "2.2"
+        name: "Write tests for no-git-found scenarios"
+        description: |
+          Write unit tests for negative detection scenarios:
+          - No .git in current directory or any parent
+          - Filesystem root boundary handling
+
+        objective: "Create unit tests for negative detection cases and boundary conditions"
+
+        inputs:
+          - "tests/unit/test_git_detection.py (from step 2.1)"
+
+        outputs:
+          - "Updated tests/unit/test_git_detection.py with negative tests"
+
+        implementation: |
+          Add to TestIsInsideGitRepo class in tests/unit/test_git_detection.py:
+
+          ```python
+              def test_returns_false_when_no_git_in_tree(self, tmp_path, monkeypatch):
+                  """AC-007: Clean directory returns False for full git init."""
+                  # Arrange - no .git anywhere
+                  clean_dir = tmp_path / "clean_project"
+                  clean_dir.mkdir()
+                  monkeypatch.chdir(clean_dir)
+
+                  # Act
+                  result = is_inside_git_repo()
+
+                  # Assert
+                  assert result is False
+
+              def test_stops_at_filesystem_root(self, tmp_path, monkeypatch):
+                  """Edge case: Traversal stops at filesystem root without infinite loop."""
+                  # Arrange - deep directory with no .git
+                  deep_dir = tmp_path / "a" / "b" / "c" / "d" / "e"
+                  deep_dir.mkdir(parents=True)
+                  monkeypatch.chdir(deep_dir)
+
+                  # Act - should complete without hanging
+                  import signal
+
+                  def timeout_handler(signum, frame):
+                      raise TimeoutError("Function did not terminate")
+
+                  signal.signal(signal.SIGALRM, timeout_handler)
+                  signal.alarm(2)  # 2 second timeout
+
+                  try:
+                      result = is_inside_git_repo()
+                      signal.alarm(0)  # Cancel alarm
+                  except TimeoutError:
+                      pytest.fail("is_inside_git_repo() did not terminate - possible infinite loop")
+
+                  # Assert
+                  assert result is False
+
+              def test_does_not_detect_sibling_git_directory(self, tmp_path, monkeypatch):
+                  """Edge case: .git in sibling directory should not be detected."""
+                  # Arrange
+                  sibling_with_git = tmp_path / "sibling_repo"
+                  sibling_with_git.mkdir()
+                  (sibling_with_git / ".git").mkdir()
+
+                  current_dir = tmp_path / "my_project"
+                  current_dir.mkdir()
+                  monkeypatch.chdir(current_dir)
+
+                  # Act
+                  result = is_inside_git_repo()
+
+                  # Assert - should NOT find sibling's .git
+                  assert result is False
+          ```
+
+        verification:
+          command: "pipenv run pytest tests/unit/test_git_detection.py -v 2>&1 | tail -20"
+          expected: "Tests fail (ImportError/NameError - function not implemented)"
+
+        acceptance_criteria:
+          - "3 test methods for negative/boundary cases"
+          - "Timeout protection to catch infinite loops"
+          - "Sibling directory isolation test"
+          - "All tests fail (Red phase)"
+
+        dependencies:
+          - "2.1"
+
+        agent_notes: |
+          The signal.alarm approach works on Unix systems. For cross-platform
+          compatibility, consider using pytest-timeout plugin in production.
+
+      - step_id: "2.3"
+        name: "Add import and final test structure"
+        description: |
+          Finalize the test file with proper imports and structure.
+          Add the import statement that will work once implementation exists.
+
+        objective: "Complete test file structure ready for Green phase"
+
+        inputs:
+          - "tests/unit/test_git_detection.py (from step 2.2)"
+
+        outputs:
+          - "Complete tests/unit/test_git_detection.py"
+
+        implementation: |
+          Final tests/unit/test_git_detection.py structure:
+
+          ```python
+          """Unit tests for git repository detection.
+
+          Tests the is_inside_git_repo() function that detects whether
+          the current working directory is inside a git repository.
+
+          Reference: ADR-001-git-detection-algorithm.md
+          Acceptance Criteria: AC-001 through AC-007
+          """
+          import pytest
+          import signal
+          from pathlib import Path
+
+          # Import the function under test
+          # This will fail until implementation in Phase 3
+          import sys
+          sys.path.insert(0, str(Path(__file__).parent.parent.parent / "hooks"))
+
+          try:
+              from post_gen_project import is_inside_git_repo
+          except ImportError:
+              # Function not yet implemented - define placeholder for test collection
+              def is_inside_git_repo():
+                  raise NotImplementedError("Function not yet implemented")
+
+
+          class TestIsInsideGitRepo:
+              """Test suite for is_inside_git_repo() function.
+
+              Covers:
+              - AC-001: Parent directory traversal
+              - AC-002: Detection at any parent level
+              - AC-003: .git file detection (worktrees)
+              - AC-007: Clean directory returns False
+              """
+
+              # ... all test methods from steps 2.1 and 2.2 ...
+          ```
+
+        verification:
+          command: "pipenv run pytest tests/unit/test_git_detection.py --collect-only 2>&1 | grep 'test_'"
+          expected: "7 test methods collected"
+
+        acceptance_criteria:
+          - "Test file has complete imports"
+          - "Fallback import for pre-implementation phase"
+          - "All 7 test methods discoverable"
+          - "Tests fail with NotImplementedError or actual assertion failures"
+
+        dependencies:
+          - "2.2"
+
+        agent_notes: |
+          The try/except import allows pytest to collect tests even when
+          the function doesn't exist yet. Tests will fail with NotImplementedError.
+
+  # =============================================================================
+  # PHASE 3: IMPLEMENTATION - GREEN PHASE
+  # =============================================================================
+  - phase_id: "3"
+    name: "Implementation - Green Phase"
+    description: "Implement is_inside_git_repo() to make unit tests pass"
+    estimated_time: "30 minutes"
+
+    steps:
+      - step_id: "3.1"
+        name: "Implement is_inside_git_repo() function"
+        description: |
+          Add the is_inside_git_repo() function to post_gen_project.py
+          following the algorithm specified in ADR-001.
+
+        objective: "Implement git detection function per ADR-001 specification"
+
+        inputs:
+          - "hooks/post_gen_project.py (current implementation)"
+          - "ADR-001 algorithm specification"
+
+        outputs:
+          - "Updated hooks/post_gen_project.py with is_inside_git_repo()"
+
+        implementation: |
+          Add to hooks/post_gen_project.py after the imports section:
+
+          ```python
+          from pathlib import Path
+
+
+          def is_inside_git_repo() -> bool:
+              """Detect if current directory is inside a git repository.
+
+              Traverses parent directories looking for .git (directory or file).
+              Returns True on first match, False if filesystem root reached.
+
+              Handles:
+              - Standard .git directories
+              - Git worktrees (.git as file)
+              - Submodules (.git as file)
+
+              Reference: ADR-001-git-detection-algorithm.md
+
+              Returns:
+                  bool: True if inside git repo, False otherwise
+              """
+              current = Path.cwd()
+              while current != current.parent:  # Stop at filesystem root
+                  git_path = current / ".git"
+                  if git_path.exists():  # Works for both directory and file
+                      return True
+                  current = current.parent
+              # Check root directory itself
+              return (current / ".git").exists()
+          ```
+
+          Location: Insert after line 6 (after PROJECT_DIRECTORY definition)
+
+        verification:
+          command: "pipenv run pytest tests/unit/test_git_detection.py -v"
+          expected: "All 7 tests pass (Green phase achieved)"
+
+        acceptance_criteria:
+          - "Function added to post_gen_project.py"
+          - "Function signature matches ADR-001"
+          - "Docstring documents behavior and reference"
+          - "All unit tests pass"
+
+        dependencies:
+          - "2.3"
+
+        agent_notes: |
+          This is the Green phase - minimal implementation to pass tests.
+          Do not add conditional logic yet - that comes in Phase 5.
+
+      - step_id: "3.2"
+        name: "Verify unit test coverage"
+        description: |
+          Run unit tests with coverage to ensure implementation is fully tested.
+          Target: >90% coverage for is_inside_git_repo() function.
+
+        objective: "Confirm adequate test coverage for git detection"
+
+        inputs:
+          - "hooks/post_gen_project.py (updated)"
+          - "tests/unit/test_git_detection.py"
+
+        outputs:
+          - "Coverage report showing >90% for is_inside_git_repo()"
+
+        implementation: |
+          1. Run tests with coverage:
+             pipenv run pytest tests/unit/test_git_detection.py --cov=hooks --cov-report=term-missing
+
+          2. Verify is_inside_git_repo function has >90% coverage
+
+          3. If coverage gaps exist, add targeted tests
+
+        verification:
+          command: "pipenv run pytest tests/unit/test_git_detection.py --cov=hooks.post_gen_project --cov-report=term-missing 2>&1 | grep -A5 'TOTAL'"
+          expected: "Coverage >90% for is_inside_git_repo lines"
+
+        acceptance_criteria:
+          - "All unit tests pass"
+          - "Coverage >90% for is_inside_git_repo()"
+          - "No uncovered branches in detection logic"
+
+        dependencies:
+          - "3.1"
+
+        agent_notes: |
+          Coverage measurement requires pytest-cov. If not installed,
+          the tests still pass but coverage report won't be generated.
+
+  # =============================================================================
+  # PHASE 4: REFACTOR POST_GEN_PROJECT.PY
+  # =============================================================================
+  - phase_id: "4"
+    name: "Refactor post_gen_project.py"
+    description: "Restructure the hook script to support conditional execution"
+    estimated_time: "60 minutes"
+
+    steps:
+      - step_id: "4.1"
+        name: "Extract environment setup function"
+        description: |
+          Extract the environment setup commands (pipenv, typing-extensions, tests)
+          into a dedicated function. These always run regardless of git status.
+
+        objective: "Isolate always-run operations into setup_environment()"
+
+        inputs:
+          - "hooks/post_gen_project.py (current)"
+
+        outputs:
+          - "Updated hooks/post_gen_project.py with setup_environment()"
+
+        implementation: |
+          Add function after is_inside_git_repo():
+
+          ```python
+          def setup_environment():
+              """Set up development environment.
+
+              Always runs regardless of git repository status.
+              Operations:
+              - Install dev dependencies via pipenv
+              - Fix typing-extensions packaging
+              - Run dry test cycle
+              """
+              print("Setting up development environment...")
+
+              print("  Creating virtual environment...")
+              run_command("pipenv install --dev")
+
+              print("  Fixing typing-extensions packaging...")
+              run_command("pipenv run forceTypingExtensions")
+
+              print("  Running dry test cycle...")
+              run_command("pipenv run tests")
+          ```
+
+        verification:
+          command: "grep -n 'def setup_environment' hooks/post_gen_project.py"
+          expected: "Function definition found"
+
+        acceptance_criteria:
+          - "setup_environment() function created"
+          - "Contains pipenv install, forceTypingExtensions, tests commands"
+          - "Has descriptive docstring"
+          - "Original main block unchanged (refactor in progress)"
+
+        dependencies:
+          - "3.2"
+
+        agent_notes: |
+          This is incremental refactoring. The main block still has the
+          original code - we're adding functions without breaking existing behavior.
+
+      - step_id: "4.2"
+        name: "Extract git initialization function"
+        description: |
+          Extract the git repository creation commands into a dedicated function.
+          These only run when NOT inside an existing git repository.
+
+        objective: "Isolate repo-creation operations into initialize_git_repository()"
+
+        inputs:
+          - "hooks/post_gen_project.py (from step 4.1)"
+
+        outputs:
+          - "Updated hooks/post_gen_project.py with initialize_git_repository()"
+
+        implementation: |
+          Add function after setup_environment():
+
+          ```python
+          def initialize_git_repository(kata_name: str):
+              """Initialize a new git repository with GitHub remote.
+
+              Only runs when NOT inside an existing git repository.
+              Skipped in integration mode (inside existing repo).
+
+              Operations:
+              - Create private GitHub repository
+              - Initialize local git repository
+              - Add remote origin
+              - Set main branch
+
+              Args:
+                  kata_name: Name for the repository
+              """
+              print("Initializing new git repository...")
+
+              print("  Creating GitHub repository...")
+              run_command(f"gh repo create {kata_name} --private")
+
+              print("  Initializing local repository...")
+              run_command("git init")
+
+              print("  Adding remote origin...")
+              run_command(
+                  f"git remote add origin git@github.com:undeadgrishnackh/{kata_name}.git"
+              )
+
+              print("  Setting main branch...")
+              run_command("git branch -M main")
+          ```
+
+        verification:
+          command: "grep -n 'def initialize_git_repository' hooks/post_gen_project.py"
+          expected: "Function definition found"
+
+        acceptance_criteria:
+          - "initialize_git_repository(kata_name) function created"
+          - "Contains gh repo create, git init, remote add, branch -M"
+          - "Does NOT contain git add, commit, push (those are separate)"
+          - "Has docstring explaining when it runs"
+
+        dependencies:
+          - "4.1"
+
+        agent_notes: |
+          Note: git push is NOT in this function. Push only happens in
+          standalone mode after commit, handled separately.
+
+      - step_id: "4.3"
+        name: "Extract commit and push functions"
+        description: |
+          Extract commit operations into separate functions:
+          - install_pre_commit_hooks() - always runs
+          - create_validation_commit() - always runs
+          - push_to_remote() - only in standalone mode
+
+        objective: "Isolate commit/push operations for conditional execution"
+
+        inputs:
+          - "hooks/post_gen_project.py (from step 4.2)"
+
+        outputs:
+          - "Updated hooks/post_gen_project.py with commit functions"
+
+        implementation: |
+          Add functions after initialize_git_repository():
+
+          ```python
+          def install_pre_commit_hooks():
+              """Install pre-commit hooks for local quality gate.
+
+              Always runs regardless of git repository status.
+              """
+              print("Installing pre-commit hooks...")
+              run_command("pipenv run install_pre_hooks")
+
+
+          def create_validation_commit(kata_name: str):
+              """Create validation commit with scaffolding.
+
+              Always runs to commit the generated files.
+              In integration mode: commits to current branch
+              In standalone mode: commits to main branch (set in initialize_git_repository)
+
+              Args:
+                  kata_name: Name used in commit message
+              """
+              print("Creating validation commit...")
+
+              print("  Staging all files...")
+              run_command("git add --all")
+
+              print("  Committing scaffolding...")
+              run_command(f'git commit -m "feat: jumpstart {kata_name} with cookiecutter"')
+
+
+          def push_to_remote():
+              """Push initial commit to remote repository.
+
+              Only runs in standalone mode (new repository).
+              Skipped in integration mode (inside existing repo).
+              """
+              print("Pushing to remote...")
+              run_command("git push -u origin main")
+          ```
+
+        verification:
+          command: "grep -c 'def install_pre_commit_hooks\\|def create_validation_commit\\|def push_to_remote' hooks/post_gen_project.py"
+          expected: "3"
+
+        acceptance_criteria:
+          - "Three functions created: install_pre_commit_hooks, create_validation_commit, push_to_remote"
+          - "Each function has clear docstring"
+          - "Validation commit uses kata_name parameter"
+          - "Push function isolated for conditional use"
+
+        dependencies:
+          - "4.2"
+
+        agent_notes: |
+          The push_to_remote() function will only be called in standalone mode.
+          In integration mode, the user manages their own push workflow.
+
+  # =============================================================================
+  # PHASE 5: IMPLEMENT CONDITIONAL LOGIC
+  # =============================================================================
+  - phase_id: "5"
+    name: "Implement Conditional Logic"
+    description: "Wire up the conditional execution based on git detection"
+    estimated_time: "45 minutes"
+
+    steps:
+      - step_id: "5.1"
+        name: "Create main orchestration function"
+        description: |
+          Replace the current main block with a structured orchestration
+          function that calls the extracted functions conditionally.
+
+        objective: "Implement conditional execution flow per architecture"
+
+        inputs:
+          - "hooks/post_gen_project.py (from step 4.3)"
+          - "Architecture flow diagram (Section 5)"
+
+        outputs:
+          - "Updated hooks/post_gen_project.py with main() orchestration"
+
+        implementation: |
+          Replace the __main__ block with:
+
+          ```python
+          def main():
+              """Main orchestration for post-generation hook.
+
+              Execution flow:
+              1. Detect if inside existing git repository
+              2. Setup environment (always)
+              3. Initialize git repository (if not inside existing repo)
+              4. Install pre-commit hooks (always)
+              5. Create validation commit (always)
+              6. Push to remote (only if new repository)
+
+              Reference: docs/architecture/architecture.md Section 5
+              """
+              kata_name = "{{ cookiecutter.directory_name }}"
+
+              # Step 1: Detect git repository
+              inside_git_repo = is_inside_git_repo()
+
+              if inside_git_repo:
+                  print("Detected existing git repository - running in integration mode")
+              else:
+                  print("No existing git repository - running in standalone mode")
+
+              # Step 2: Setup environment (always)
+              setup_environment()
+
+              # Step 3: Initialize git repository (standalone only)
+              if not inside_git_repo:
+                  initialize_git_repository(kata_name)
+              else:
+                  print("Skipping repository creation (inside existing repo)")
+
+              # Step 4: Install pre-commit hooks (always)
+              install_pre_commit_hooks()
+
+              # Step 5: Create validation commit (always)
+              create_validation_commit(kata_name)
+
+              # Step 6: Push to remote (standalone only)
+              if not inside_git_repo:
+                  push_to_remote()
+              else:
+                  print("Skipping push (inside existing repo - manage push manually)")
+
+              print("Scaffolding complete!")
+
+
+          if __name__ == "__main__":
+              main()
+          ```
+
+        verification:
+          command: "python -c \"import ast; ast.parse(open('hooks/post_gen_project.py').read()); print('Syntax OK')\""
+          expected: "Syntax OK"
+
+        acceptance_criteria:
+          - "main() function implements conditional flow"
+          - "is_inside_git_repo() called to determine mode"
+          - "setup_environment() always called"
+          - "initialize_git_repository() only called when NOT inside repo"
+          - "push_to_remote() only called when NOT inside repo"
+          - "create_validation_commit() always called"
+          - "Clear status messages indicate mode"
+
+        dependencies:
+          - "4.3"
+
+        agent_notes: |
+          This is the critical integration step. The conditional logic
+          implements AC-004 (skip repo creation) and AC-005/AC-006 (always run setup/commit).
+
+      - step_id: "5.2"
+        name: "Remove VS Code hardcoded launch"
+        description: |
+          Remove the hardcoded 'code .' command that breaks headless automation.
+          This is a breaking change documented in the architecture.
+
+        objective: "Remove IDE auto-launch for CI/CD and agent compatibility"
+
+        inputs:
+          - "hooks/post_gen_project.py (from step 5.1)"
+          - "Architecture Section 7.2 (Breaking Changes)"
+
+        outputs:
+          - "Updated hooks/post_gen_project.py without VS Code launch"
+
+        implementation: |
+          1. Remove the line: run_command("code .")
+          2. Keep the final success message
+
+          The main() function ending should be:
+          ```python
+              # ... previous code ...
+
+              print("Scaffolding complete!")
+              print("Ready to code!")
+          ```
+
+          Note: IDE opening will be added as optional parameter in US-003.
+          For now, removing hardcoded launch is the correct behavior.
+
+        verification:
+          command: "grep -c 'code \\.' hooks/post_gen_project.py"
+          expected: "0"
+
+        acceptance_criteria:
+          - "No 'code .' command in hook"
+          - "Hook completes without launching any IDE"
+          - "Suitable for headless/CI execution"
+
+        dependencies:
+          - "5.1"
+
+        agent_notes: |
+          This is a breaking change. Users who want VS Code to open
+          will need to add open_ide=vscode parameter (US-003 feature).
+
+  # =============================================================================
+  # PHASE 6: VALIDATION
+  # =============================================================================
+  - phase_id: "6"
+    name: "Validation"
+    description: "Run acceptance tests and perform manual verification"
+    estimated_time: "45 minutes"
+
+    steps:
+      - step_id: "6.1"
+        name: "Create step definitions for acceptance tests"
+        description: |
+          Implement pytest-bdd step definitions for the Gherkin scenarios
+          in US001_git_repository_detection.feature.
+
+        objective: "Enable acceptance test execution with step implementations"
+
+        inputs:
+          - "tests/acceptance/features/US001_git_repository_detection.feature"
+          - "hooks/post_gen_project.py (updated)"
+
+        outputs:
+          - "tests/acceptance/step_defs/test_git_detection_steps.py"
+
+        implementation: |
+          Create step definitions file:
+
+          ```python
+          """Step definitions for US001 Git Repository Detection."""
+          import os
+          import subprocess
+          import tempfile
+          from pathlib import Path
+
+          import pytest
+          from pytest_bdd import given, when, then, parsers, scenarios
+
+          # Load all scenarios from feature file
+          scenarios('../features/US001_git_repository_detection.feature')
+
+
+          @pytest.fixture
+          def test_context():
+              """Shared test context for scenario state."""
+              return {
+                  'temp_dir': None,
+                  'project_dir': None,
+                  'git_repo_path': None,
+                  'hook_result': None,
+                  'hook_output': None,
+              }
+
+
+          # Given steps
+          @given('the cookiecutter template is available')
+          def template_available():
+              """Verify template exists."""
+              template_path = Path(__file__).parent.parent.parent.parent / 'cookiecutter.json'
+              assert template_path.exists(), f"Template not found at {template_path}"
+
+
+          @given(parsers.parse('{persona} is the 5D-Wave agent working in a project directory'))
+          def agent_in_project_dir(test_context, persona, tmp_path):
+              """Set up agent working directory."""
+              test_context['temp_dir'] = tmp_path
+              test_context['project_dir'] = tmp_path / 'my-project'
+              test_context['project_dir'].mkdir()
+
+
+          @given('the project has an existing git repository from DISCUSS phase')
+          def existing_git_repo(test_context):
+              """Create existing git repository."""
+              git_dir = test_context['project_dir'] / '.git'
+              git_dir.mkdir()
+              test_context['git_repo_path'] = git_dir
+
+
+          # When steps
+          @when(parsers.parse('Alex generates a Python scaffold with directory name "{directory_name}"'))
+          def generate_scaffold(test_context, directory_name):
+              """Run the post_gen_project hook."""
+              # Import and run the hook's is_inside_git_repo function
+              import sys
+              hooks_path = Path(__file__).parent.parent.parent.parent / 'hooks'
+              sys.path.insert(0, str(hooks_path))
+
+              from post_gen_project import is_inside_git_repo
+
+              # Change to project directory and run detection
+              original_dir = os.getcwd()
+              os.chdir(test_context['project_dir'])
+
+              try:
+                  result = is_inside_git_repo()
+                  test_context['hook_result'] = result
+              finally:
+                  os.chdir(original_dir)
+
+
+          # Then steps
+          @then('the hook detects the existing git repository')
+          def hook_detects_repo(test_context):
+              """Verify detection result."""
+              assert test_context['hook_result'] is True
+
+
+          @then('the hook skips GitHub repository creation')
+          def hook_skips_gh_create(test_context):
+              """In integration mode, gh repo create is skipped."""
+              # This is verified by the hook_result being True
+              assert test_context['hook_result'] is True
+
+
+          # ... additional step definitions for remaining scenarios ...
+          ```
+
+        verification:
+          command: "pipenv run pytest tests/acceptance/ --collect-only 2>&1 | grep -c 'test_'"
+          expected: ">0 tests collected"
+
+        acceptance_criteria:
+          - "Step definitions file created"
+          - "Scenarios can be collected by pytest"
+          - "Core detection scenarios have step implementations"
+          - "Test fixtures properly manage temp directories"
+
+        dependencies:
+          - "5.2"
+
+        agent_notes: |
+          This is a simplified step definitions file. Full implementation
+          would need all step definitions for all 11 scenarios. Focus on
+          the 3 happy-path scenarios first.
+
+      - step_id: "6.2"
+        name: "Run acceptance tests and fix failures"
+        description: |
+          Execute the full acceptance test suite and address any failures.
+          Target: All 11 scenarios passing.
+
+        objective: "Achieve 100% acceptance test pass rate"
+
+        inputs:
+          - "tests/acceptance/ (step definitions from 6.1)"
+          - "hooks/post_gen_project.py (updated)"
+
+        outputs:
+          - "All acceptance tests passing"
+          - "Test execution report"
+
+        implementation: |
+          1. Run acceptance tests:
+             pipenv run pytest tests/acceptance/ -v --tb=short
+
+          2. For each failure:
+             a. Identify root cause (missing step, logic error, fixture issue)
+             b. Fix the step definition or implementation
+             c. Re-run to verify fix
+
+          3. Iterate until all tests pass
+
+          4. Generate final test report:
+             pipenv run pytest tests/acceptance/ -v --tb=short --junitxml=test-results.xml
+
+        verification:
+          command: "pipenv run pytest tests/acceptance/ -v 2>&1 | tail -5"
+          expected: "All tests passed or clear pass/fail summary"
+
+        acceptance_criteria:
+          - "All 11 acceptance scenarios passing (or documented exceptions)"
+          - "No test failures due to implementation bugs"
+          - "Test execution completes without framework errors"
+
+        dependencies:
+          - "6.1"
+
+        agent_notes: |
+          Some edge case scenarios (permission denied, symlinks) may be
+          difficult to test in all environments. Document any skipped tests.
+
+  # =============================================================================
+  # PHASE 7: FINALIZATION
+  # =============================================================================
+  - phase_id: "7"
+    name: "Finalization"
+    description: "Documentation, cleanup, and commit"
+    estimated_time: "20 minutes"
+
+    steps:
+      - step_id: "7.1"
+        name: "Code quality check"
+        description: |
+          Run linters and formatters to ensure code quality.
+          Fix any issues before final commit.
+
+        objective: "Ensure code meets quality standards"
+
+        inputs:
+          - "hooks/post_gen_project.py"
+          - "tests/unit/test_git_detection.py"
+          - "tests/acceptance/step_defs/test_git_detection_steps.py"
+
+        outputs:
+          - "All files pass linting"
+          - "All files formatted consistently"
+
+        implementation: |
+          1. Run black formatter:
+             pipenv run black hooks/ tests/
+
+          2. Run flake8 linter:
+             pipenv run flake8 hooks/ tests/ --max-line-length=120
+
+          3. Run mypy type checker (if configured):
+             pipenv run mypy hooks/post_gen_project.py
+
+          4. Fix any issues reported
+
+        verification:
+          command: "pipenv run black --check hooks/post_gen_project.py 2>&1"
+          expected: "would be reformatted or All done!"
+
+        acceptance_criteria:
+          - "Black formatting applied"
+          - "No flake8 errors"
+          - "Type hints where applicable"
+
+        dependencies:
+          - "6.2"
+
+        agent_notes: |
+          The template may have specific linting configuration in pyproject.toml
+          or setup.cfg. Check for existing configuration.
+
+      - step_id: "7.2"
+        name: "Final commit"
+        description: |
+          Create a well-documented commit for the US-001 implementation.
+          Include references to user story and ADR.
+
+        objective: "Create traceable commit for the feature"
+
+        inputs:
+          - "All modified files"
+          - "US-001 user story reference"
+          - "ADR-001 reference"
+
+        outputs:
+          - "Git commit with proper message"
+
+        implementation: |
+          1. Stage all changes:
+             git add hooks/post_gen_project.py
+             git add tests/unit/test_git_detection.py
+             git add tests/acceptance/step_defs/test_git_detection_steps.py
+
+          2. Create commit with conventional commit message:
+             git commit -m "feat(hooks): add smart git repository detection
+
+             Implements US-001: Smart Git Repository Detection
+
+             - Add is_inside_git_repo() function using pathlib.Path traversal
+             - Refactor post_gen_project.py into modular functions
+             - Skip repository creation when inside existing git repo
+             - Preserve backwards compatibility for standalone kata creation
+             - Remove hardcoded VS Code launch for CI/CD compatibility
+
+             Acceptance Criteria:
+             - AC-001: Parent directory traversal implemented
+             - AC-002: Detection works at any parent level
+             - AC-003: .git file detection (worktrees) supported
+             - AC-004: Repository creation skipped in integration mode
+             - AC-005: Environment setup always executes
+             - AC-006: Validation commit always executes
+             - AC-007: Clean directory triggers full git init
+
+             Reference: ADR-001-git-detection-algorithm.md
+             Closes: US-COOKIECUTTER-GIT-2026-001"
+
+        verification:
+          command: "git log --oneline -1"
+          expected: "Commit created with feat(hooks): message"
+
+        acceptance_criteria:
+          - "Commit message follows conventional commits"
+          - "References user story and ADR"
+          - "Lists all acceptance criteria addressed"
+          - "All files staged and committed"
+
+        dependencies:
+          - "7.1"
+
+        agent_notes: |
+          This commit completes US-001. The feature is ready for integration
+          into the main branch after code review.
+
+# =============================================================================
+# DEPENDENCIES SUMMARY
+# =============================================================================
+dependencies_graph:
+  "1.1": []
+  "1.2": ["1.1"]
+  "2.1": ["1.1"]
+  "2.2": ["2.1"]
+  "2.3": ["2.2"]
+  "3.1": ["2.3"]
+  "3.2": ["3.1"]
+  "4.1": ["3.2"]
+  "4.2": ["4.1"]
+  "4.3": ["4.2"]
+  "5.1": ["4.3"]
+  "5.2": ["5.1"]
+  "6.1": ["5.2"]
+  "6.2": ["6.1"]
+  "7.1": ["6.2"]
+  "7.2": ["7.1"]
+
+# =============================================================================
+# PARALLEL EXECUTION OPPORTUNITIES
+# =============================================================================
+parallel_opportunities:
+  - description: "Steps 2.1 and 2.2 could be parallelized if different developers"
+    steps: ["2.1", "2.2"]
+    constraint: "Merging test files requires coordination"
+
+  - description: "None significant - TDD requires sequential Red-Green-Refactor"
+    note: "Outside-In TDD is inherently sequential"
+
+# =============================================================================
+# RISK MITIGATION
+# =============================================================================
+risks:
+  - risk: "pytest-bdd not configured correctly"
+    mitigation: "Step 1.2 validates framework before proceeding"
+    impact: "Low - can install if missing"
+
+  - risk: "Acceptance tests have undefined steps"
+    mitigation: "Step 6.1 creates step definitions"
+    impact: "Medium - may require significant step definition work"
+
+  - risk: "Breaking change (VS Code removal) causes user complaints"
+    mitigation: "Documented in architecture, US-003 adds optional IDE parameter"
+    impact: "Low - clear migration path exists"
+
+# =============================================================================
+# SUCCESS CRITERIA
+# =============================================================================
+success_criteria:
+  - "All 7 unit tests for is_inside_git_repo() pass"
+  - "All acceptance tests pass (11 scenarios)"
+  - "Backwards compatibility verified (standalone kata creation)"
+  - "Integration mode verified (inside existing repo)"
+  - "Code passes linting and formatting"
+  - "Commit created with proper message and references"
+
+# =============================================================================
+# METADATA
+# =============================================================================
+metadata:
+  created_at: 2026-01-08T00:00:00Z
+  architect: Morgan (Solution Architect)
+  methodology: Outside-In TDD
+  baseline_reference: docs/workflow/us-001-git-detection/baseline.yaml
+  architecture_reference: docs/architecture/architecture.md
+  adr_reference: docs/architecture/adrs/ADR-001-git-detection-algorithm.md

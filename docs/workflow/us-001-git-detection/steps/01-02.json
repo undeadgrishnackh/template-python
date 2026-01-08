@@ -1,0 +1,85 @@
+{
+  "task_id": "01-02",
+  "phase": 1,
+  "step": 2,
+  "name": "Verify acceptance test framework",
+  "description": "Ensure pytest-bdd is configured and acceptance tests can be discovered. Run the existing acceptance tests to establish baseline (should fail).",
+  "motivation": "Confirm acceptance test infrastructure is operational before proceeding with implementation. This validates the test framework works and establishes a baseline of expected failures.",
+  "context": {
+    "files_to_read": [
+      "tests/acceptance/features/US001_git_repository_detection.feature",
+      "Pipfile"
+    ],
+    "files_to_modify": [
+      "Pipfile (add pytest-bdd to dev-packages if missing)"
+    ],
+    "files_to_create": [],
+    "prerequisites": [
+      "Step 01-01 completed (unit test file created and verified)",
+      "pipenv command available in PATH",
+      "tests/acceptance/features/ directory structure exists"
+    ],
+    "reference_documents": [],
+    "critical_context": "pytest-bdd is NOT currently in Pipfile [dev-packages]. It must be installed before framework validation can proceed."
+  },
+  "instructions": [
+    "CRITICAL: Check Pipfile dev-packages section. If pytest-bdd is missing, run first:",
+    "   pipenv install pytest-bdd --dev",
+    "",
+    "1. Verify pytest-bdd is installed by running:",
+    "   pipenv run pip list | grep pytest-bdd",
+    "   Expected output: pytest-bdd line showing version (e.g., pytest-bdd     6.1.1)",
+    "",
+    "2. Run acceptance test discovery to verify framework finds feature file:",
+    "   pipenv run pytest tests/acceptance/ --collect-only",
+    "   Expected output: 'collected X items' where X > 0, listing scenarios from US001_git_repository_detection.feature",
+    "",
+    "3. Run acceptance tests (expect failures - no step definitions yet):",
+    "   pipenv run pytest tests/acceptance/ -v --tb=short 2>&1 | head -100",
+    "   Expected: Test collection succeeds, then failures due to missing step definitions",
+    "   ACCEPTABLE FAILURES: StepError, PendingStep, or fixture errors (these mean framework is working)",
+    "",
+    "4. Document results:",
+    "   - Confirm: pytest-bdd found in pip list",
+    "   - Confirm: Feature file scenarios discovered by pytest",
+    "   - Confirm: No pytest framework errors (collection errors = FAILURE)",
+    "   - Note: Step definition failures are expected at this stage"
+  ],
+  "acceptance_criteria": [
+    "pytest-bdd is installed and appears in 'pipenv run pip list' output",
+    "Pytest collects >= 11 scenarios from US001_git_repository_detection.feature without collection errors",
+    "pytest --collect-only shows scenarios grouped by tags (@happy-path, @edge-case, @error-path)",
+    "Test execution reaches step definitions (shows 'StepError' or 'PendingStep' for missing steps, NOT pytest collection/import errors)",
+    "All framework-level errors are resolved (pytest can parse feature file syntax correctly)"
+  ],
+  "verification": {
+    "step_1_pytest_installed": {
+      "command": "pipenv run pip list | grep pytest-bdd",
+      "expected": "Shows pytest-bdd with version number (e.g., pytest-bdd     6.1.1)"
+    },
+    "step_2_discovery_succeeds": {
+      "command": "pipenv run pytest tests/acceptance/ --collect-only 2>&1 | head -20",
+      "expected": "Output contains 'test session starts' and 'collected' followed by number > 0, no 'ERROR' or 'error' in output"
+    },
+    "step_3_scenarios_found": {
+      "command": "pipenv run pytest tests/acceptance/ --collect-only 2>&1 | grep -c '<Scenario'",
+      "expected": "Output is >= 11 (number of scenarios in feature file)"
+    },
+    "step_4_steps_validation": {
+      "command": "pipenv run pytest tests/acceptance/ -v 2>&1 | grep -E 'StepError|PendingStep|FAILED|PASSED' | head -5",
+      "expected": "Shows StepError or PendingStep for missing step definitions (framework is working), NOT 'ERROR' from pytest itself"
+    }
+  },
+  "estimated_minutes": 10,
+  "dependencies": [
+    "01-01"
+  ],
+  "state": {
+    "status": "pending",
+    "ready_for_execution": false,
+    "blocking_issues": [
+      "pytest-bdd not in Pipfile [dev-packages] - must run 'pipenv install pytest-bdd --dev' first"
+    ]
+  },
+  "agent_notes": "This step validates pytest-bdd framework capability, not implementation correctness. Failures due to missing step definitions are EXPECTED and ACCEPTABLE. Framework collection errors are NOT acceptable. Distinguish between: GOOD - StepError for missing steps | BAD - ERROR during test collection. If acceptance test structure file does not exist at tests/acceptance/features/US001_git_repository_detection.feature, create it from the provided feature content before running discovery commands."
+}

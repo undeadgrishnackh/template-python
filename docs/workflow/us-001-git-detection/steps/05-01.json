@@ -1,0 +1,128 @@
+{
+  "task_id": "05-01",
+  "phase": 5,
+  "step": 1,
+  "name": "Create main orchestration function",
+  "description": "Replace the current main block with a structured orchestration function that calls the extracted functions conditionally based on git detection.",
+  "motivation": "Implement conditional execution flow per architecture. The main() function orchestrates all operations and uses is_inside_git_repo() to determine which operations to run.",
+  "context": {
+    "files_to_read": [
+      "hooks/post_gen_project.py",
+      "docs/architecture/architecture.md"
+    ],
+    "files_to_modify": [
+      "hooks/post_gen_project.py"
+    ],
+    "files_to_create": [],
+    "prerequisites": [
+      "Step 04-03 completed (all helper functions extracted): is_inside_git_repo(), setup_environment(), initialize_git_repository(), install_pre_commit_hooks(), create_validation_commit(), push_to_remote()"
+    ],
+    "reference_documents": [
+      "docs/architecture/architecture.md - Section 5 (Flow Diagram) and Section 4 (Component Design)",
+      "ADR-001: Git Repository Detection Algorithm",
+      "ADR-002: Directory Name as Integration Signal"
+    ],
+    "execution_flow": {
+      "step_1": "Detect if inside existing git repository",
+      "step_2": "Setup environment (always)",
+      "step_3": "Initialize git repository (if not inside existing repo)",
+      "step_4": "Install pre-commit hooks (always)",
+      "step_5": "Create validation commit (always)",
+      "step_6": "Push to remote (only if new repository)"
+    }
+  },
+  "instructions": [
+    "1. Open hooks/post_gen_project.py",
+    "",
+    "2. Replace the existing __main__ block with the following main() function and entry point:",
+    "",
+    "```python",
+    "def main():",
+    "    \"\"\"Main orchestration for post-generation hook.",
+    "",
+    "    Execution flow:",
+    "    1. Detect if inside existing git repository",
+    "    2. Setup environment (always)",
+    "    3. Initialize git repository (if not inside existing repo)",
+    "    4. Install pre-commit hooks (always)",
+    "    5. Create validation commit (always)",
+    "    6. Push to remote (only if new repository)",
+    "",
+    "    Reference: docs/architecture/architecture.md Section 5",
+    "    \"\"\"",
+    "    kata_name = \"{{ cookiecutter.directory_name }}\"",
+    "",
+    "    # Step 1: Detect git repository",
+    "    inside_git_repo = is_inside_git_repo()",
+    "",
+    "    if inside_git_repo:",
+    "        print(\"Detected existing git repository - running in integration mode\")",
+    "    else:",
+    "        print(\"No existing git repository - running in standalone mode\")",
+    "",
+    "    # Step 2: Setup environment (always)",
+    "    setup_environment()",
+    "",
+    "    # Step 3: Initialize git repository (standalone only)",
+    "    if not inside_git_repo:",
+    "        initialize_git_repository(kata_name)",
+    "    else:",
+    "        print(\"Skipping repository creation (inside existing repo)\")",
+    "",
+    "    # Step 4: Install pre-commit hooks (always)",
+    "    install_pre_commit_hooks()",
+    "",
+    "    # Step 5: Create validation commit (always)",
+    "    create_validation_commit(kata_name)",
+    "",
+    "    # Step 6: Push to remote (standalone only)",
+    "    if not inside_git_repo:",
+    "        push_to_remote()",
+    "    else:",
+    "        print(\"Skipping push (inside existing repo - manage push manually)\")",
+    "",
+    "    print(\"Scaffolding complete!\")",
+    "",
+    "",
+    "if __name__ == \"__main__\":",
+    "    main()",
+    "```",
+    "",
+    "3. Verify Python syntax is valid:",
+    "   python -c \"import ast; ast.parse(open('hooks/post_gen_project.py').read()); print('Syntax OK')\"",
+    "",
+    "4. Verify all unit tests still pass:",
+    "   pipenv run pytest tests/unit/test_git_detection.py -v"
+  ],
+  "acceptance_criteria": [
+    "main() function exists and is called by __main__ block",
+    "main() implements conditional flow exactly as documented in instructions",
+    "is_inside_git_repo() is called once at start to determine mode",
+    "setup_environment() is called unconditionally",
+    "initialize_git_repository() is called ONLY when not inside repo (if not inside_git_repo branch)",
+    "install_pre_commit_hooks() is called unconditionally",
+    "create_validation_commit() is called unconditionally",
+    "push_to_remote() is called ONLY when not inside repo (if not inside_git_repo branch)",
+    "Status message 'Detected existing git repository - running in integration mode' printed when inside repo",
+    "Status message 'No existing git repository - running in standalone mode' printed when NOT inside repo",
+    "Status message 'Skipping repository creation (inside existing repo)' printed when skipping init",
+    "Status message 'Skipping push (inside existing repo - manage push manually)' printed when skipping push",
+    "Final status message 'Scaffolding complete!' printed at end",
+    "Python syntax is valid (imports, indentation, structure)",
+    "All referenced functions are callable (from prerequisite 04-03)"
+  ],
+  "verification": {
+    "command": "python -c \"import ast; import sys; code = open('hooks/post_gen_project.py').read(); ast.parse(code); assert 'def main():' in code; assert 'if __name__ == \\\"__main__\\\":' in code; assert 'is_inside_git_repo()' in code; print('Verification OK - main() orchestration structure valid')\"",
+    "expected": "Verification OK - main() orchestration structure valid"
+  },
+  "estimated_minutes": 20,
+  "dependencies": [
+    "04-03"
+  ],
+  "state": {
+    "status": "pending",
+    "ready_for_execution": false,
+    "validation_notes": "Step file updated for clarity. Requires 04-03 completion before execution. All function references, AC criteria, and verification expanded for specificity."
+  },
+  "agent_notes": "This is the critical integration step. The conditional logic implements AC-004 (skip repo creation) and AC-005/AC-006 (always run setup/commit)."
+}

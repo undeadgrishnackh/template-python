@@ -1,0 +1,120 @@
+{
+  "task_id": "02-01",
+  "phase": 2,
+  "step": 1,
+  "name": "Write tests for .git detection in current and parent directories",
+  "description": "Write unit tests for the core detection scenarios: .git directory in current directory, .git directory in parent directory (1-3 levels up), and .git file (worktree) detection.",
+  "motivation": "Create comprehensive unit tests for positive detection cases as part of TDD Red phase. These tests must fail initially because the function does not exist yet.",
+  "context": {
+    "files_to_read": [
+      "tests/unit/test_git_detection.py",
+      "docs/architecture/adrs/ADR-001-git-detection-algorithm.md"
+    ],
+    "files_to_modify": [
+      "tests/unit/test_git_detection.py"
+    ],
+    "files_to_create": [],
+    "prerequisites": [
+      "Step 01-01 completed (test file exists at tests/unit/test_git_detection.py)",
+      "Understanding of ADR-001 algorithm specification",
+      "Familiarity with pytest fixtures: tmp_path (temporary directory), monkeypatch (change working directory)"
+    ],
+    "reference_documents": [
+      "docs/architecture/adrs/ADR-001-git-detection-algorithm.md"
+    ],
+    "algorithm_specification": "from pathlib import Path\n\ndef is_inside_git_repo() -> bool:\n    \"\"\"Detect if current directory is inside a git repository.\n    \n    Traverses parent directories looking for .git (directory or file).\n    Returns True on first match, False if filesystem root reached.\n    \"\"\"\n    current = Path.cwd()\n    while current != current.parent:\n        git_path = current / \".git\"\n        if git_path.exists():\n            return True\n        current = current.parent\n    return (current / \".git\").exists()",
+    "test_framework": "pytest with fixtures tmp_path (temporary isolated directory) and monkeypatch (environment modification)",
+    "import_note": "The function import is commented out in 01-01; it will be uncommented before executing this step"
+  },
+  "instructions": [
+    "Update tests/unit/test_git_detection.py to add the following test methods inside TestIsInsideGitRepo class:",
+    "",
+    "```python",
+    "class TestIsInsideGitRepo:",
+    "    \"\"\"Test suite for is_inside_git_repo() function.\"\"\"",
+    "",
+    "    def test_detects_git_directory_in_current_directory(self, tmp_path, monkeypatch):",
+    "        \"\"\"AC-001: Detection works for .git in current directory.\"\"\"",
+    "        # Arrange",
+    "        git_dir = tmp_path / \".git\"",
+    "        git_dir.mkdir()",
+    "        monkeypatch.chdir(tmp_path)",
+    "",
+    "        # Act",
+    "        result = is_inside_git_repo()",
+    "",
+    "        # Assert",
+    "        assert result is True",
+    "",
+    "    def test_detects_git_directory_in_parent_directory(self, tmp_path, monkeypatch):",
+    "        \"\"\"AC-002: Detection works for .git at any parent level.\"\"\"",
+    "        # Arrange - .git 2 levels up",
+    "        git_dir = tmp_path / \".git\"",
+    "        git_dir.mkdir()",
+    "        nested_dir = tmp_path / \"level1\" / \"level2\"",
+    "        nested_dir.mkdir(parents=True)",
+    "        monkeypatch.chdir(nested_dir)",
+    "",
+    "        # Act",
+    "        result = is_inside_git_repo()",
+    "",
+    "        # Assert",
+    "        assert result is True",
+    "",
+    "    def test_detects_git_directory_three_levels_up(self, tmp_path, monkeypatch):",
+    "        \"\"\"AC-002: Detection works for .git 3+ levels up (monorepo scenario).\"\"\"",
+    "        # Arrange - .git 3 levels up",
+    "        git_dir = tmp_path / \".git\"",
+    "        git_dir.mkdir()",
+    "        nested_dir = tmp_path / \"services\" / \"trading\" / \"source\"",
+    "        nested_dir.mkdir(parents=True)",
+    "        monkeypatch.chdir(nested_dir)",
+    "",
+    "        # Act",
+    "        result = is_inside_git_repo()",
+    "",
+    "        # Assert",
+    "        assert result is True",
+    "",
+    "    def test_detects_git_file_for_worktree(self, tmp_path, monkeypatch):",
+    "        \"\"\"AC-003: Detection works for .git file (worktrees, submodules).\"\"\"",
+    "        # Arrange - .git as file (worktree format)",
+    "        git_file = tmp_path / \".git\"",
+    "        git_file.write_text(\"gitdir: /path/to/actual/git/dir\")",
+    "        monkeypatch.chdir(tmp_path)",
+    "",
+    "        # Act",
+    "        result = is_inside_git_repo()",
+    "",
+    "        # Assert",
+    "        assert result is True",
+    "```",
+    "",
+    "Run tests to verify they fail (Red phase):",
+    "   pipenv run pytest tests/unit/test_git_detection.py -v 2>&1 | tail -20"
+  ],
+  "acceptance_criteria": [
+    "Exactly 4 test methods added: test_detects_git_directory_in_current_directory, test_detects_git_directory_in_parent_directory, test_detects_git_directory_three_levels_up, test_detects_git_file_for_worktree",
+    "Each test method uses pytest fixtures: tmp_path (creates isolated test directory), monkeypatch (changes working directory)",
+    "Each test strictly follows Arrange-Act-Assert pattern with comments",
+    "Each test has docstring that maps to specific acceptance criteria (AC-001: current dir, AC-002: parent levels, AC-003: worktree file)",
+    "All 4 tests fail when executed (Red phase of TDD - function is_inside_git_repo not yet imported/implemented)",
+    "Test file passes pytest syntax validation (import check, no undefined references except is_inside_git_repo)"
+  ],
+  "verification": {
+    "step_1_syntax_check": "pipenv run pytest tests/unit/test_git_detection.py --collect-only 2>&1",
+    "expected_1": "4 tests collected successfully (syntax is valid)",
+    "step_2_execution_check": "pipenv run pytest tests/unit/test_git_detection.py -v 2>&1",
+    "expected_2": "All 4 tests FAIL with NameError: name 'is_inside_git_repo' is not defined (this is correct Red phase behavior)"
+  },
+  "estimated_minutes": 15,
+  "dependencies": [
+    "01-01"
+  ],
+  "state": {
+    "status": "pending",
+    "ready_for_execution": true,
+    "ready_reason": "Step 01-01 must complete first to create test_git_detection.py file and ensure tests/unit/ directory exists"
+  },
+  "agent_notes": "RED PHASE OF TDD: These tests MUST fail when executed. The is_inside_git_repo function does not exist yet and is not imported. This is expected and correct. In Step 02-02, we will implement the function to make these tests pass (GREEN phase)."
+}

@@ -1,0 +1,128 @@
+{
+  "task_id": "04-01",
+  "phase": 4,
+  "step": 1,
+  "name": "Extract environment setup function",
+  "description": "Extract the environment setup commands (pipenv, typing-extensions, tests) into a dedicated function. These always run regardless of git status.",
+  "motivation": "Isolate always-run operations into setup_environment() function as part of refactoring post_gen_project.py to support conditional execution.",
+  "context": {
+    "files_to_read": [
+      "hooks/post_gen_project.py"
+    ],
+    "files_to_modify": [
+      "hooks/post_gen_project.py"
+    ],
+    "files_to_create": [],
+    "current_state": {
+      "run_command_function": "EXISTS at lines 11-18",
+      "if_name_main_block": "EXISTS at lines 21-62",
+      "setup_environment_function": "MISSING - to be added"
+    },
+    "prerequisites": [
+      "Step 03-02 completed (unit tests passing with coverage verified)"
+    ],
+    "reference_documents": [
+      "docs/architecture/architecture.md (Section 10.2 - Component Architecture)"
+    ],
+    "operations_to_encapsulate": [
+      "pipenv install --dev",
+      "pipenv run forceTypingExtensions",
+      "pipenv run tests",
+      "pipenv run install_pre_hooks"
+    ],
+    "operations_not_yet_touched": [
+      "git add --all",
+      "git commit -m 'feat: jumpstart..."
+    ]
+  },
+  "instructions": [
+    "1. Open hooks/post_gen_project.py in the project root",
+    "",
+    "2. Add the setup_environment() function after the run_command() function (after line 18, before the if __name__ block):",
+    "",
+    "```python",
+    "def setup_environment():",
+    "    \"\"\"Set up development environment.",
+    "",
+    "    Always runs regardless of git repository status.",
+    "    Operations:",
+    "    - Install dev dependencies via pipenv",
+    "    - Fix typing-extensions packaging",
+    "    - Run dry test cycle",
+    "    - Install git pre-commit hooks",
+    "    \"\"\"",
+    "    print('Setting up development environment...')",
+    "",
+    "    print('  Creating virtual environment...')",
+    "    run_command('pipenv install --dev')",
+    "",
+    "    print('  Fixing typing-extensions packaging...')",
+    "    run_command('pipenv run forceTypingExtensions')",
+    "",
+    "    print('  Running dry test cycle...')",
+    "    run_command('pipenv run tests')",
+    "",
+    "    print('  Installing git hooks...')",
+    "    run_command('pipenv run install_pre_hooks')",
+    "```",
+    "",
+    "3. Verify the function was added at correct location:",
+    "   grep -n -A 20 'def setup_environment' hooks/post_gen_project.py",
+    "",
+    "4. Verify Python syntax is valid:",
+    "   python -m py_compile hooks/post_gen_project.py && echo 'Syntax OK'",
+    "",
+    "5. Verify all four setup operations are present:",
+    "   grep -c 'pipenv install --dev\\|forceTypingExtensions\\|pipenv run tests\\|install_pre_hooks' hooks/post_gen_project.py"
+  ],
+  "acceptance_criteria": [
+    "setup_environment() function exists in hooks/post_gen_project.py",
+    "Function is positioned between run_command() and if __name__ == '__main__' block",
+    "Function contains print statement for 'Setting up development environment'",
+    "Function calls run_command('pipenv install --dev')",
+    "Function calls run_command('pipenv run forceTypingExtensions')",
+    "Function calls run_command('pipenv run tests')",
+    "Function calls run_command('pipenv run install_pre_hooks')",
+    "Function has docstring explaining purpose and 'Always runs regardless of git repository status'",
+    "Function is not called in main block yet (will be done in later steps)",
+    "Original main block remains unchanged and functional",
+    "Python syntax is valid (py_compile succeeds)",
+    "All four setup operations documented in docstring match implemented calls"
+  ],
+  "verification": {
+    "primary_check": "python -m py_compile hooks/post_gen_project.py && echo 'PASS: Syntax valid'",
+    "expected_primary": "PASS: Syntax valid",
+    "secondary_checks": [
+      "grep 'def setup_environment' hooks/post_gen_project.py",
+      "grep 'pipenv install --dev' hooks/post_gen_project.py",
+      "grep 'forceTypingExtensions' hooks/post_gen_project.py",
+      "grep 'pipenv run tests' hooks/post_gen_project.py",
+      "grep 'install_pre_hooks' hooks/post_gen_project.py"
+    ],
+    "all_checks_must_pass": true
+  },
+  "estimated_minutes": 15,
+  "dependencies": [
+    "03-02"
+  ],
+  "state": {
+    "status": "pending",
+    "ready_for_execution": false
+  },
+  "agent_notes": "This is incremental refactoring. The main block still has the original code - we're adding functions without breaking existing behavior.",
+  "critical_scope": {
+    "DO_NOT_MODIFY": [
+      "The if __name__ == '__main__' block (remains unchanged)",
+      "The run_command() function",
+      "The PROJECT_DIRECTORY and kata_name variables"
+    ],
+    "DO_EXTRACT": [
+      "Only the four setup operations: pipenv install, forceTypingExtensions, tests, install_pre_hooks"
+    ],
+    "FUTURE_STEPS": [
+      "Step 04-02 will extract conditional git operations",
+      "Step 04-03 will extract IDE launcher logic",
+      "Step 04-04 will refactor main block to call these functions conditionally"
+    ]
+  }
+}

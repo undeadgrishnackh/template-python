@@ -1,0 +1,128 @@
+{
+  "task_id": "06-02",
+  "phase": 6,
+  "step": 2,
+  "name": "Run acceptance tests and fix failures",
+  "description": "Execute the full acceptance test suite and address any failures. Target: All 11 scenarios passing.",
+  "motivation": "Achieve 100% acceptance test pass rate to validate the implementation meets all acceptance criteria.",
+  "context": {
+    "files_to_read": [
+      "tests/acceptance/step_defs/test_git_detection_steps.py",
+      "tests/acceptance/features/US001_git_repository_detection.feature",
+      "hooks/post_gen_project.py"
+    ],
+    "files_to_modify": [
+      "tests/acceptance/step_defs/test_git_detection_steps.py"
+    ],
+    "files_to_create": [],
+    "prerequisites": [
+      "Step 06-01 completed (step definitions file exists and can be collected by pytest)"
+    ],
+    "reference_documents": [
+      "https://pytest-bdd.readthedocs.io/en/latest/"
+    ],
+    "target_scenarios": 11,
+    "scenario_breakdown": {
+      "total_scenarios": 11,
+      "happy_path": 3,
+      "edge_case": 4,
+      "error_path": 3,
+      "background": 1
+    }
+  },
+  "instructions": [
+    "PRIORITY ORDER: Implement step definitions in this sequence for maximum impact",
+    "",
+    "PHASE 1 - Happy Path (Priority 1: Complete first for core functionality)",
+    "1. Implement step definitions for 3 happy path scenarios:",
+    "   - Agent detects existing repository and skips repo creation",
+    "   - Nested monorepo detection traverses multiple parent levels",
+    "   - Clean directory triggers full git initialization",
+    "",
+    "2. Run happy path tests to verify foundation:",
+    "   pipenv run pytest tests/acceptance/ -v -k 'happy-path' --tb=short",
+    "",
+    "PHASE 2 - Edge Cases (Priority 2: Expand coverage)",
+    "3. Add step definitions for 4 edge case scenarios:",
+    "   - Git worktree detection works with .git file",
+    "   - Detection stops safely at filesystem root",
+    "   - Detection works correctly with symlinked directories",
+    "   - Existing repository branch is preserved during scaffold",
+    "",
+    "4. Run edge case tests to verify extended scenarios:",
+    "   pipenv run pytest tests/acceptance/ -v -k 'edge-case' --tb=short",
+    "",
+    "PHASE 3 - Error Handling (Priority 3: Complete coverage)",
+    "5. Add step definitions for 3 error path scenarios:",
+    "   - Detection continues despite permission-denied directories",
+    "   - GitHub CLI failure in standalone mode provides clear error",
+    "   - Missing git command in standalone mode provides guidance",
+    "",
+    "6. Run error path tests to verify error handling:",
+    "   pipenv run pytest tests/acceptance/ -v -k 'error-path' --tb=short",
+    "",
+    "COMMON FAILURE PATTERNS AND FIXES:",
+    "   - Missing step: grep 'StepError\\|NotImplementedStep' test-output.txt to identify gaps",
+    "   - Import error in step: Verify sys.path.insert(0, str(hooks_path)) is correct",
+    "   - Fixture not passed: Ensure @given/@when/@then decorated functions include test_context parameter",
+    "   - temp_path fixture: Always use tmp_path pytest built-in, not custom temp directory",
+    "   - Path resolution: Use Path(__file__).parent.parent.parent.parent for relative imports",
+    "",
+    "7. After each phase, run full test suite:",
+    "   pipenv run pytest tests/acceptance/ -v --tb=line",
+    "",
+    "8. If failures occur in any phase:",
+    "   a. Capture full traceback: pipenv run pytest tests/acceptance/ -v --tb=long > /tmp/test_output.log",
+    "   b. Analyze root cause (missing step, logic error, import issue, fixture scope)",
+    "   c. Fix the identified issue in test_git_detection_steps.py",
+    "   d. Re-run that phase only to verify fix",
+    "   e. Once phase passes, continue to next phase",
+    "",
+    "9. Generate final comprehensive test report:",
+    "   pipenv run pytest tests/acceptance/ -v --tb=short --junitxml=test-results.xml",
+    "",
+    "10. Document any scenarios that cannot be tested due to environment constraints:",
+    "    - Permission denied (requires root/permission manipulation)",
+    "    - Symlinks (OS-dependent behavior - document OS used)",
+    "    - gh CLI failures (requires unauthenticated environment setup)"
+  ],
+  "acceptance_criteria": [
+    "All 11 acceptance scenarios passing (or documented exceptions with justification)",
+    "No test failures due to implementation bugs in is_inside_git_repo() - logic errors must be fixed in hooks/post_gen_project.py",
+    "Test execution completes without framework errors (pytest collection succeeds, all scenarios runnable)",
+    "Test report generated successfully with junitxml output",
+    "VERIFIABLE: At least 3 happy-path scenarios pass before proceeding to edge cases",
+    "VERIFIABLE: All 11 scenarios have step definition implementations (no 'undefined step' errors)",
+    "VERIFIABLE: pytest test output shows pass/fail for each scenario (--tb=short captures issue details)",
+    "Exception documentation: Any skipped scenarios documented with OS, environment, and specific constraint"
+  ],
+  "verification": {
+    "command_phase_1": "pipenv run pytest tests/acceptance/ -v -k 'happy-path' 2>&1 | grep -E '^tests/.*PASSED|^tests/.*FAILED' | wc -l",
+    "expected_phase_1": "At least 3 lines (happy-path scenarios)",
+
+    "command_phase_2": "pipenv run pytest tests/acceptance/ -v -k 'edge-case' 2>&1 | grep -E '^tests/.*PASSED|^tests/.*FAILED' | wc -l",
+    "expected_phase_2": "At least 4 lines (edge-case scenarios)",
+
+    "command_phase_3": "pipenv run pytest tests/acceptance/ -v -k 'error-path' 2>&1 | grep -E '^tests/.*PASSED|^tests/.*FAILED' | wc -l",
+    "expected_phase_3": "At least 3 lines (error-path scenarios)",
+
+    "command_final": "pipenv run pytest tests/acceptance/ -v --tb=short 2>&1 | tail -10",
+    "expected_final": "All 11 tests passed or documented exceptions with specific reasons"
+  },
+  "estimated_minutes": 45,
+  "dependencies": [
+    "06-01"
+  ],
+  "state": {
+    "status": "pending",
+    "ready_for_execution": false
+  },
+  "agent_notes": "CRITICAL: This step depends on 06-01 completing successfully. If step definitions file doesn't exist or cannot be collected, cannot proceed. STRATEGY: Implement in phases (happy path first) to get quick feedback. ENVIRONMENT CONSTRAINTS: Permission denied and symlink scenarios may be OS/environment dependent - document constraints explicitly. COMMON PITFALL: Test failures often indicate missing step definitions, not bugs in is_inside_git_repo(). Check pytest output for 'undefined step' errors first. FIXTURE SCOPING: Ensure test_context fixture is properly scoped and passed to all step definitions. Use tmp_path built-in fixture for temporary directories, not custom implementations.",
+  "success_signals": [
+    "pytest collection shows 11+ tests collected (scenarios have step implementations)",
+    "Happy path tests show PASSED status immediately after fixing step definitions",
+    "Error output changes from 'undefined step' to actual test assertions",
+    "Test report generated with clear pass/fail for each scenario"
+  ],
+  "rollback_trigger": "If after 45 minutes, fewer than 6 scenarios passing, reassess step definitions completeness and consider splitting into multiple steps"
+}

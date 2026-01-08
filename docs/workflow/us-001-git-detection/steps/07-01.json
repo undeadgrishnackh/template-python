@@ -1,0 +1,86 @@
+{
+  "task_id": "07-01",
+  "phase": 7,
+  "step": 1,
+  "name": "Code quality check with Ruff",
+  "description": "Run Ruff formatter and linter to ensure code quality and consistency. Ruff replaces Black, Flake8, isort, and partial pylint functionality. Fix any issues before final commit.",
+  "motivation": "Ensure code meets quality standards (formatting, style, type hints, security) before committing. Consistent Ruff-enforced formatting and zero linting errors indicate production-ready code.",
+  "context": {
+    "files_to_read": [
+      "hooks/post_gen_project.py",
+      "tests/unit/test_git_detection.py",
+      "tests/acceptance/step_defs/test_git_detection_steps.py",
+      "{{cookiecutter. directory_name}}/pyproject.toml (for Ruff configuration)"
+    ],
+    "files_to_modify": [
+      "hooks/post_gen_project.py",
+      "tests/unit/test_git_detection.py",
+      "tests/acceptance/step_defs/test_git_detection_steps.py"
+    ],
+    "files_to_create": [],
+    "prerequisites": [
+      "Step 06-02 completed (all acceptance tests passing)"
+    ],
+    "reference_documents": [
+      "{{cookiecutter. directory_name}}/pyproject.toml - Ruff tool configuration with enforcement of type hints (ANN rules)",
+      "{{cookiecutter. directory_name}}/.pre-commit-config.yaml - Pre-commit hooks configuration"
+    ],
+    "quality_tools": [
+      "Ruff (unified formatter, linter, isort, complexity checker)",
+      "mypy (type checking) - for modules/ only, not tests"
+    ],
+    "tool_configuration": {
+      "line_length": 120,
+      "target_version": "py311",
+      "type_hints": "ENFORCED on functions (ANN rules) - except in tests/*",
+      "security_checks": "Enabled (Bandit via Ruff)",
+      "import_sorting": "Enabled (isort via Ruff)"
+    }
+  },
+  "instructions": [
+    "1. Format all modified Python files with Ruff formatter:",
+    "   pipenv run ruff format hooks/ tests/",
+    "",
+    "2. Run Ruff linter with automatic fixes enabled:",
+    "   pipenv run ruff check --fix hooks/ tests/",
+    "",
+    "3. Run type checking on hooks module (test files excluded per config):",
+    "   pipenv run mypy hooks/post_gen_project.py",
+    "",
+    "4. For any remaining issues after auto-fix:",
+    "   - Read Ruff output carefully - it categorizes issues by type",
+    "   - Type hint issues (ANN): Add type hints to function signatures",
+    "   - Import issues: Ruff will auto-sort if --fix applied",
+    "   - Security issues (S/B codes): Review for actual security concerns",
+    "   - Style issues: Re-run formatter",
+    "",
+    "5. Verify all tools pass without issues:",
+    "   pipenv run ruff format --check hooks/",
+    "   pipenv run ruff check hooks/",
+    "",
+    "6. Run all tests one final time to ensure no regressions:",
+    "   pipenv run pytest tests/unit/test_git_detection.py -v",
+    "   pipenv run pytest tests/acceptance/ -v"
+  ],
+  "acceptance_criteria": [
+    "Ruff formatter applied to all Python files (consistent style per pyproject.toml)",
+    "Ruff linter passes with zero violations (ruff check passes)",
+    "Type hints enforced on all functions per ANN rules (except test files)",
+    "Type checking passes on hooks module (mypy passes)",
+    "All tests still pass after formatting and linting",
+    "No false positive security warnings (bandit integration via Ruff)"
+  ],
+  "verification": {
+    "command": "pipenv run ruff format --check hooks/ 2>&1 && pipenv run ruff check hooks/ 2>&1 && pipenv run mypy hooks/post_gen_project.py 2>&1",
+    "expected": "All checks pass with no formatting changes needed and no linting violations"
+  },
+  "estimated_minutes": 20,
+  "dependencies": [
+    "06-02"
+  ],
+  "state": {
+    "status": "pending",
+    "ready_for_execution": false
+  },
+  "agent_notes": "Critical context: The project uses Ruff (modern unified toolchain) NOT separate Black+Flake8. Ruff configuration is in {{cookiecutter. directory_name}}/pyproject.toml with ANN rules ENFORCING type hints on functions. mypy is configured for modules/ only (per .pre-commit-config.yaml files filter). Test files have relaxed type hint requirements per ruff.lint.per-file-ignores. Pre-commit hooks will run these automatically on commit, so passing here ensures CI/CD will pass."
+}

@@ -1,0 +1,140 @@
+{
+  "task_id": "04-02",
+  "phase": 4,
+  "step": 2,
+  "name": "Extract git initialization function",
+  "description": "Extract the git repository creation commands into a dedicated function. These only run when NOT inside an existing git repository.",
+  "motivation": "Isolate repo-creation operations into initialize_git_repository() function. These operations should be skipped when running inside an existing git repository (integration mode).",
+  "context": {
+    "files_to_read": [
+      "hooks/post_gen_project.py"
+    ],
+    "files_to_modify": [
+      "hooks/post_gen_project.py"
+    ],
+    "files_to_create": [],
+    "prerequisites": [
+      "Step 04-01 completed (setup_environment function exists)"
+    ],
+    "reference_documents": [
+      "docs/architecture/architecture.md"
+    ],
+    "operations_to_skip_when_inside_repo": [
+      "gh repo create {kata_name} --private",
+      "git init",
+      "git remote add origin",
+      "git branch -M main",
+      "git push -u origin main"
+    ]
+  },
+  "instructions": [
+    "1. Open hooks/post_gen_project.py and locate setup_environment() function",
+    "   (must exist from step 04-01 completion)",
+    "",
+    "2. Add initialize_git_repository() function immediately after setup_environment():",
+    "",
+    "```python",
+    "def initialize_git_repository(kata_name: str) -> None:",
+    "    \"\"\"Initialize a new git repository with GitHub remote.",
+    "",
+    "    Performs repository creation and configuration for STANDALONE mode only.",
+    "    In integration mode, this function is NOT called.",
+    "",
+    "    Operations (standalone mode):",
+    "    - Create private GitHub repository",
+    "    - Initialize local git repository",
+    "    - Add remote origin",
+    "    - Set main branch",
+    "",
+    "    Args:",
+    "        kata_name: Name for the repository",
+    "    \"\"\"",
+    "    print(\"Initializing new git repository...\")",
+    "",
+    "    print(\"  Creating GitHub repository...\")",
+    "    run_command(f\"gh repo create {kata_name} --private\")",
+    "",
+    "    print(\"  Initializing local repository...\")",
+    "    run_command(\"git init\")",
+    "",
+    "    print(\"  Adding remote origin...\")",
+    "    run_command(",
+    "        f\"git remote add origin git@github.com:undeadgrishnackh/{kata_name}.git\"",
+    "    )",
+    "",
+    "    print(\"  Setting main branch...\")",
+    "    run_command(\"git branch -M main\")",
+    "```",
+    "",
+    "3. Locate main execution flow (in __main__ block)",
+    "   - After setup_environment() call completes",
+    "   - Before git add/commit operations",
+    "",
+    "4. Add conditional call for standalone mode only:",
+    "",
+    "```python",
+    "    # Git initialization (standalone mode only)",
+    "    if not is_integration_mode():",
+    "        initialize_git_repository(kata_name)",
+    "```",
+    "",
+    "   Note: is_integration_mode() must be imported/defined from earlier steps",
+    "",
+    "5. Verify function signature:",
+    "   grep -A 2 'def initialize_git_repository' hooks/post_gen_project.py",
+    "",
+    "6. Verify function is called in main flow:",
+    "   grep 'initialize_git_repository' hooks/post_gen_project.py",
+    "",
+    "7. Verify Python syntax is valid:",
+    "   python -m py_compile hooks/post_gen_project.py"
+  ],
+  "acceptance_criteria": [
+    "initialize_git_repository(kata_name: str) -> None function defined",
+    "Function placed immediately after setup_environment() in file",
+    "Function contains exactly: gh repo create, git init, git remote add origin, git branch -M (in that order)",
+    "Function signature includes return type annotation (-> None)",
+    "Function does NOT contain git add, git commit, git push operations (handled separately)",
+    "Docstring states function for 'standalone mode only' and describes mode differentiation",
+    "Main execution flow contains: if not is_integration_mode(): initialize_git_repository(kata_name)",
+    "Python syntax validation passes (python -m py_compile)",
+    "Function is callable with kata_name string parameter"
+  ],
+  "verification": {
+    "syntax_check": {
+      "command": "python -m py_compile hooks/post_gen_project.py && echo 'PASS: Python syntax valid'",
+      "expected": "PASS: Python syntax valid"
+    },
+    "function_exists": {
+      "command": "grep -c 'def initialize_git_repository' hooks/post_gen_project.py",
+      "expected": "1"
+    },
+    "function_called": {
+      "command": "grep -c 'initialize_git_repository(kata_name)' hooks/post_gen_project.py",
+      "expected": "1 (called once in main flow)"
+    },
+    "conditional_guard": {
+      "command": "grep -B 1 'initialize_git_repository' hooks/post_gen_project.py | head -2",
+      "expected": "Contains 'if not is_integration_mode()' guard"
+    },
+    "no_push_in_function": {
+      "command": "awk '/def initialize_git_repository/,/^def / { print }' hooks/post_gen_project.py | grep -c 'git push'",
+      "expected": "0 (no git push in function)"
+    }
+  },
+  "estimated_minutes": 15,
+  "dependencies": [
+    "04-01 (setup_environment() function must exist and be invoked in main flow)"
+  ],
+  "required_prerequisites": [
+    "run_command() function exists (from file baseline)",
+    "setup_environment(kata_name: str) -> None function exists and placed before this step",
+    "is_integration_mode() function exists (from earlier step) and available for conditional guard",
+    "kata_name variable extracted from cookiecutter context"
+  ],
+  "state": {
+    "status": "pending",
+    "ready_for_execution": false
+  },
+  "agent_notes": "CRITICAL: This function creates ONLY the repository structure. Git push will occur in a later step after git add/commit. Execution flow: setup_environment() -> initialize_git_repository() [if standalone] -> install_pre_hooks -> git add -> git commit -> git push [if standalone]. Integration mode skips initialize_git_repository() and git push entirely, keeping changes local to the parent repository."
+}

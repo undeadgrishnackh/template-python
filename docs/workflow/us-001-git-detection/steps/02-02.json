@@ -1,0 +1,118 @@
+{
+  "task_id": "02-02",
+  "phase": 2,
+  "step": 2,
+  "name": "Write tests for no-git-found scenarios",
+  "description": "Write unit tests for negative detection scenarios: No .git in current directory or any parent, and filesystem root boundary handling.",
+  "motivation": "Create unit tests for negative detection cases and boundary conditions. These ensure the function correctly returns False when no git repository exists and handles edge cases like filesystem root traversal.",
+  "context": {
+    "files_to_read": [
+      "tests/unit/test_git_detection.py"
+    ],
+    "files_to_modify": [
+      "tests/unit/test_git_detection.py"
+    ],
+    "files_to_create": [],
+    "prerequisites": [
+      "Step 02-01 completed (TestIsInsideGitRepo class exists with imports)",
+      "tests/unit/test_git_detection.py has: pytest imports, fixtures (tmp_path, monkeypatch), and TestIsInsideGitRepo class",
+      "is_inside_git_repo function NOT yet implemented (will be in Phase 3)"
+    ],
+    "reference_documents": [],
+    "test_class_structure": "These tests are added to the existing TestIsInsideGitRepo class from 02-01. Assume pytest imports and fixtures are already present.",
+    "platform_note": "The timeout test uses signal.alarm() which is Unix-only (Linux/macOS). On Windows, this test requires pytest-timeout plugin as fallback."
+  },
+  "instructions": [
+    "Add the following test methods to the TestIsInsideGitRepo class in tests/unit/test_git_detection.py:",
+    "",
+    "```python",
+    "    def test_returns_false_when_no_git_in_tree(self, tmp_path, monkeypatch):",
+    "        \"\"\"AC-007: Clean directory returns False for full git init.\"\"\"",
+    "        # Arrange - no .git anywhere",
+    "        clean_dir = tmp_path / \"clean_project\"",
+    "        clean_dir.mkdir()",
+    "        monkeypatch.chdir(clean_dir)",
+    "",
+    "        # Act",
+    "        result = is_inside_git_repo()",
+    "",
+    "        # Assert",
+    "        assert result is False",
+    "",
+    "    def test_stops_at_filesystem_root(self, tmp_path, monkeypatch):",
+    "        \"\"\"Edge case: Traversal stops at filesystem root without infinite loop.\"\"\"",
+    "        # Arrange - deep directory with no .git",
+    "        deep_dir = tmp_path / \"a\" / \"b\" / \"c\" / \"d\" / \"e\"",
+    "        deep_dir.mkdir(parents=True)",
+    "        monkeypatch.chdir(deep_dir)",
+    "",
+    "        # Act - should complete without hanging",
+    "        import signal",
+    "        import platform",
+    "",
+    "        def timeout_handler(signum, frame):",
+    "            raise TimeoutError(\"Function did not terminate\")",
+    "",
+    "        # Unix only: signal.alarm doesn't work on Windows",
+    "        if platform.system() != \"Windows\":",
+    "            signal.signal(signal.SIGALRM, timeout_handler)",
+    "            signal.alarm(2)  # 2 second timeout",
+    "",
+    "        try:",
+    "            result = is_inside_git_repo()",
+    "            if platform.system() != \"Windows\":",
+    "                signal.alarm(0)  # Cancel alarm",
+    "        except TimeoutError:",
+    "            pytest.fail(\"is_inside_git_repo() did not terminate - possible infinite loop\")",
+    "",
+    "        # Assert",
+    "        assert result is False",
+    "",
+    "    def test_does_not_detect_sibling_git_directory(self, tmp_path, monkeypatch):",
+    "        \"\"\"Edge case: .git in sibling directory should not be detected.\"\"\"",
+    "        # Arrange",
+    "        sibling_with_git = tmp_path / \"sibling_repo\"",
+    "        sibling_with_git.mkdir()",
+    "        (sibling_with_git / \".git\").mkdir()",
+    "",
+    "        current_dir = tmp_path / \"my_project\"",
+    "        current_dir.mkdir()",
+    "        monkeypatch.chdir(current_dir)",
+    "",
+    "        # Act",
+    "        result = is_inside_git_repo()",
+    "",
+    "        # Assert - should NOT find sibling's .git",
+    "        assert result is False",
+    "```",
+    "",
+    "Run tests to verify they fail (Red phase):",
+    "   pipenv run pytest tests/unit/test_git_detection.py -v 2>&1 | tail -20"
+  ],
+  "acceptance_criteria": [
+    "3 test methods added to TestIsInsideGitRepo class for negative/boundary cases",
+    "test_returns_false_when_no_git_in_tree: Verifies False return when no .git exists anywhere in tree",
+    "test_stops_at_filesystem_root: Includes platform-aware timeout protection (Unix with signal.alarm, Windows skipped)",
+    "test_does_not_detect_sibling_git_directory: Verifies False when .git is only in sibling directory",
+    "All tests fail with NameError or ImportError (Red phase - is_inside_git_repo function not yet implemented)"
+  ],
+  "verification": {
+    "command": "pipenv run pytest tests/unit/test_git_detection.py::TestIsInsideGitRepo::test_returns_false_when_no_git_in_tree tests/unit/test_git_detection.py::TestIsInsideGitRepo::test_stops_at_filesystem_root tests/unit/test_git_detection.py::TestIsInsideGitRepo::test_does_not_detect_sibling_git_directory -v",
+    "expected_output_contains": [
+      "test_returns_false_when_no_git_in_tree FAILED",
+      "test_stops_at_filesystem_root FAILED",
+      "test_does_not_detect_sibling_git_directory FAILED",
+      "NameError: name 'is_inside_git_repo' is not defined"
+    ],
+    "interpretation": "All 3 tests fail because is_inside_git_repo function does not exist yet - this is the expected Red phase outcome"
+  },
+  "estimated_minutes": 15,
+  "dependencies": [
+    "02-01"
+  ],
+  "state": {
+    "status": "pending",
+    "ready_for_execution": false
+  },
+  "agent_notes": "IMPORTANT: signal.alarm() is Unix-only (Linux/macOS). The code includes platform.system() check to skip signal-based timeout on Windows. This is the Red phase - all tests MUST fail with NameError until the function is implemented in a later phase. Do NOT implement the function here."
+}

@@ -1,0 +1,80 @@
+{
+  "task_id": "01-01",
+  "phase": 1,
+  "step": 1,
+  "name": "Create unit test file for git detection",
+  "description": "Create the unit test file structure for the is_inside_git_repo() function. This follows TDD - tests are written before implementation.",
+  "motivation": "Establish test file structure for git detection module following TDD methodology where tests are written before implementation exists.",
+  "context": {
+    "files_to_read": [
+      "hooks/post_gen_project.py"
+    ],
+    "files_to_modify": [],
+    "files_to_create": [
+      "tests/unit/test_git_detection.py"
+    ],
+    "prerequisites": [
+      "Python development environment is set up",
+      "pytest is available in the project"
+    ],
+    "reference_documents": [
+      "docs/architecture/adrs/ADR-001-git-detection-algorithm.md"
+    ]
+  },
+  "instructions": [
+    "Create the directory tests/unit/ if it does not exist",
+    "Create the file tests/unit/test_git_detection.py with the following content:",
+    "",
+    "```python",
+    "\"\"\"Unit tests for git repository detection.",
+    "",
+    "Tests the is_inside_git_repo() function that detects whether",
+    "the current working directory is inside a git repository.",
+    "",
+    "Reference: ADR-001-git-detection-algorithm.md",
+    "\"\"\"",
+    "import pytest",
+    "from pathlib import Path",
+    "from unittest.mock import patch, MagicMock",
+    "",
+    "# Import will fail until implementation exists - this is expected in TDD",
+    "# from hooks.post_gen_project import is_inside_git_repo",
+    "",
+    "",
+    "class TestIsInsideGitRepo:",
+    "    \"\"\"Test suite for is_inside_git_repo() function.\"\"\"",
+    "",
+    "    # Tests will be added in subsequent steps",
+    "    pass",
+    "```",
+    "",
+    "Verify the file was created correctly:",
+    "1. File exists at tests/unit/test_git_detection.py",
+    "2. File contains module docstring explaining purpose",
+    "3. File contains all required imports (pytest, Path, patch, MagicMock)",
+    "4. File contains TestIsInsideGitRepo class with docstring and pass statement",
+    "Note: Import of is_inside_git_repo will remain commented out until Phase 3 implementation - this is expected TDD behavior"
+  ],
+  "acceptance_criteria": [
+    "test_git_detection.py file created in tests/unit/ directory",
+    "File contains module docstring with description of git detection testing purpose",
+    "File imports: pytest, pathlib.Path, unittest.mock.patch, unittest.mock.MagicMock",
+    "File contains TestIsInsideGitRepo class with docstring, pass statement, and comment indicating test methods will be added in subsequent steps",
+    "Commented import of is_inside_git_repo is present with explanation that it will work after Phase 3 implementation"
+  ],
+  "verification": {
+    "command": "ls -la tests/unit/test_git_detection.py && grep -q 'class TestIsInsideGitRepo' tests/unit/test_git_detection.py && grep -q 'import pytest' tests/unit/test_git_detection.py",
+    "expected": "File exists AND contains TestIsInsideGitRepo class AND imports pytest. Verification confirms all acceptance criteria met."
+  },
+  "estimated_minutes": 5,
+  "dependencies": [
+    "Python 3.11+ environment configured and active",
+    "pytest installed and available in development environment",
+    "tests/ directory exists in project root"
+  ],
+  "state": {
+    "status": "pending",
+    "ready_for_execution": true
+  },
+  "agent_notes": "This is a TDD setup step. The import of is_inside_git_repo will fail until Phase 3 when we implement the function. This is expected behavior."
+}

@@ -1,0 +1,79 @@
+{
+  "task_id": "05-02",
+  "phase": 5,
+  "step": 2,
+  "name": "Remove VS Code hardcoded launch",
+  "description": "Remove the hardcoded 'code .' command that breaks headless automation. This is a breaking change documented in the architecture.",
+  "motivation": "Remove IDE auto-launch for CI/CD and agent compatibility. Hardcoded IDE launch prevents headless execution and is incompatible with automation workflows.",
+  "context": {
+    "files_to_read": [
+      "hooks/post_gen_project.py (contains run_command(\"code .\") on line 60)",
+      "docs/architecture/architecture.md"
+    ],
+    "files_to_modify": [
+      "hooks/post_gen_project.py"
+    ],
+    "files_to_create": [],
+    "prerequisites": [
+      "Step 05-01 completed (main if __name__ orchestration exists)",
+      "Current file structure intact with git operations in place"
+    ],
+    "reference_documents": [
+      "docs/architecture/architecture.md - Section 4.2 (IDE Launcher Module design)"
+    ],
+    "breaking_change_info": "IDE opening will be parameterized in US-003 via 'open_ide' parameter. This step removes hardcoded IDE launch to enable CI/CD and headless execution. Users who want IDE opening will use: cookiecutter --extra-context=open_ide=vscode",
+    "execution_context": "This is a refactoring step to support headless execution. Line 60 (run_command(\"code .\")) must be deleted entirely. All other code remains unchanged."
+  },
+  "instructions": [
+    "1. Open hooks/post_gen_project.py and locate the line with 'code .'",
+    "   - Current state: run_command(\"code .\") appears on line 60",
+    "   - This command launches VS Code after git initialization",
+    "",
+    "2. Remove the entire line containing run_command(\"code .\"):",
+    "   - Delete: run_command(\"code .\")",
+    "   - Keep the print statements before and after",
+    "",
+    "3. Verify the end of the file now looks like:",
+    "   ```python",
+    "   print(\"👨🏻‍💻 time to code!\")",
+    "   # No run_command(\\\"code .\\\") here",
+    "   ",
+    "   print(\"👋🏿 bye bye! 🐍\")",
+    "   ```",
+    "",
+    "4. Verify no 'code .' command exists in the file:",
+    "   grep -c 'code \\.' hooks/post_gen_project.py || echo '0'",
+    "   (Expected output: 0)",
+    "",
+    "5. Verify Python syntax is valid and import works:",
+    "   python -c \"import ast; ast.parse(open('hooks/post_gen_project.py').read()); print('✓ Syntax valid')\"",
+    "",
+    "6. Verify unit tests still pass (headless execution validation):",
+    "   pipenv run pytest tests/unit/test_git_detection.py -v",
+    "   (Expect all tests to pass - no IDE launch required for tests)"
+  ],
+  "acceptance_criteria": [
+    "The line containing run_command(\"code .\") is completely removed from hooks/post_gen_project.py",
+    "No 'code .' substring exists anywhere in the file (verified by grep returning 0)",
+    "Print statement 'time to code!' remains in the file (line 59)",
+    "Print statement 'bye bye! 🐍' remains in the file (line 62)",
+    "Python syntax is valid and module can be imported",
+    "All unit tests pass without IDE launch side effects",
+    "Script is suitable for headless/CI execution (no subprocess attempts to open IDE)"
+  ],
+  "verification": {
+    "command": "grep -c 'code \\.' hooks/post_gen_project.py",
+    "expected": "0"
+  },
+  "estimated_minutes": 10,
+  "dependencies": [
+    "05-01"
+  ],
+  "state": {
+    "status": "pending",
+    "ready_for_execution": true,
+    "clarity_level": "high",
+    "self_contained": true
+  },
+  "agent_notes": "This is a breaking change. Users who want VS Code to open will need to add open_ide=vscode parameter (US-003 feature)."
+}

@@ -1,0 +1,101 @@
+{
+  "task_id": "04-03",
+  "phase": 4,
+  "step": 3,
+  "name": "Extract commit and push functions",
+  "description": "Extract commit operations into separate functions: install_pre_commit_hooks() - always runs, create_validation_commit() - always runs, push_to_remote() - only in standalone mode.",
+  "motivation": "Isolate commit/push operations for conditional execution. Pre-commit hooks and validation commit always run, but push only happens when creating a new standalone repository.",
+  "context": {
+    "files_to_read": [
+      "hooks/post_gen_project.py"
+    ],
+    "files_to_modify": [
+      "hooks/post_gen_project.py"
+    ],
+    "files_to_create": [],
+    "prerequisites": [
+      "Step 04-02 completed (initialize_git_repository function exists)"
+    ],
+    "reference_documents": [
+      "docs/architecture/architecture.md"
+    ]
+  },
+  "instructions": [
+    "1. Open hooks/post_gen_project.py",
+    "",
+    "2. Add the following three functions after run_command() definition and before if __name__ == \"__main__\"::",
+    "",
+    "```python",
+    "def install_pre_commit_hooks():",
+    "    \"\"\"Install pre-commit hooks for local quality gate.",
+    "",
+    "    Always runs regardless of git repository status.",
+    "    \"\"\"",
+    "    print(\"Installing pre-commit hooks...\")",
+    "    run_command(\"pipenv run install_pre_hooks\")",
+    "",
+    "",
+    "def create_validation_commit(kata_name: str):",
+    "    \"\"\"Create validation commit with scaffolding.",
+    "",
+    "    Always runs to commit the generated files.",
+    "    In integration mode: commits to current branch",
+    "    In standalone mode: commits to main branch",
+    "",
+    "    Args:",
+    "        kata_name: Name used in commit message",
+    "    \"\"\"",
+    "    print(\"Creating validation commit...\")",
+    "    print(\"  Staging all files...\")",
+    "    run_command(\"git add --all\")",
+    "    print(\"  Committing scaffolding...\")",
+    "    run_command(f'git commit -m \"feat: jumpstart {kata_name} with cookiecutter\"')",
+    "",
+    "",
+    "def push_to_remote():",
+    "    \"\"\"Push initial commit to remote repository.",
+    "",
+    "    Only runs in standalone mode (new repository).",
+    "    Skipped in integration mode (inside existing repo).",
+    "    \"\"\"",
+    "    print(\"Pushing to remote...\")",
+    "    run_command(\"git push -u origin main\")",
+    "```",
+    "",
+    "3. Verify all three functions were added correctly:",
+    "   grep -E 'def (install_pre_commit_hooks|create_validation_commit|push_to_remote)' hooks/post_gen_project.py",
+    "",
+    "4. Verify Python syntax is valid:",
+    "   python -m py_compile hooks/post_gen_project.py && echo 'Syntax OK'"
+  ],
+  "acceptance_criteria": [
+    "Three functions created with exact names: install_pre_commit_hooks(), create_validation_commit(kata_name: str), push_to_remote()",
+    "Each function has docstring with clear explanation of when/why it runs and any mode-specific behavior",
+    "create_validation_commit() accepts kata_name parameter and uses it in commit message template",
+    "push_to_remote() is isolated function, not called elsewhere in file (enables conditional execution)",
+    "All functions use run_command() helper for subprocess execution (consistency with existing pattern)",
+    "Python syntax valid: no import errors, proper indentation, valid function signatures",
+    "Verification command returns exactly 3 matching function definitions"
+  ],
+  "verification": {
+    "command": "grep -E 'def (install_pre_commit_hooks|create_validation_commit|push_to_remote)' hooks/post_gen_project.py | wc -l",
+    "expected": "3",
+    "secondary_check": "python -m py_compile hooks/post_gen_project.py && echo 'Syntax valid'"
+  },
+  "estimated_minutes": 15,
+  "dependencies": [
+    "04-02"
+  ],
+  "state": {
+    "status": "pending",
+    "ready_for_execution": false
+  },
+  "agent_notes": "The push_to_remote() function will only be called in standalone mode. In integration mode, the user manages their own push workflow.",
+  "critical_context": {
+    "prerequisite_status": "Step 04-02 (initialize_git_repository) has NOT been implemented yet",
+    "impact": "Step 04-03 cannot be fully integrated until initialize_git_repository() function exists in post_gen_project.py",
+    "current_state": "post_gen_project.py currently has inline git operations in __main__ block - no functions extracted yet",
+    "refactoring_scope": "This step extracts existing inline git operations from lines 33-57 (current __main__ block) into three functions",
+    "integration_note": "These three functions will be called from __main__ block in later steps"
+  }
+}

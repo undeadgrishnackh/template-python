@@ -1,0 +1,118 @@
+{
+  "task_id": "03-01",
+  "phase": 3,
+  "step": 1,
+  "name": "Implement is_inside_git_repo() function",
+  "description": "Add the is_inside_git_repo() function to post_gen_project.py following the algorithm specified in ADR-001.",
+  "motivation": "This is the Green phase of TDD - implement the minimal code needed to make all unit tests pass. The function detects if the current directory is inside a git repository.",
+  "context": {
+    "files_to_read": [
+      "hooks/post_gen_project.py (existing file, currently uses os module)",
+      "docs/architecture/adrs/ADR-001-git-detection-algorithm.md (algorithm reference)",
+      "tests/acceptance/steps/test_US001_git_detection_steps.py (acceptance tests define expectations)"
+    ],
+    "files_to_modify": [
+      "hooks/post_gen_project.py (add pathlib import and is_inside_git_repo function)"
+    ],
+    "files_to_create": [],
+    "prerequisites": [
+      "Step 02-03 completed (all acceptance test scenarios written and failing)",
+      "hooks/post_gen_project.py exists at /Users/michele.brissoni/ProgettiGit/UndeadGrishnackh/_template_Python_/hooks/post_gen_project.py",
+      "ADR-001 exists and specifies the exact algorithm"
+    ],
+    "reference_documents": [
+      "docs/architecture/adrs/ADR-001-git-detection-algorithm.md (definitive algorithm source)",
+      "tests/acceptance/steps/test_US001_git_detection_steps.py (test expectations)"
+    ],
+    "current_file_state": {
+      "file_path": "hooks/post_gen_project.py",
+      "line_count": 63,
+      "has_pathlib_import": false,
+      "has_os_import": true,
+      "current_imports": ["os", "subprocess"],
+      "insert_location": "After line 6 (PROJECT_DIRECTORY definition, before kata_name definition)"
+    },
+    "algorithm_specification": "from pathlib import Path\n\ndef is_inside_git_repo() -> bool:\n    current = Path.cwd()\n    while current != current.parent:\n        if (current / \".git\").exists():\n            return True\n        current = current.parent\n    return (current / \".git\").exists()"
+  },
+  "instructions": [
+    "1. Verify prerequisite - hooks/post_gen_project.py exists at the root hooks/ directory",
+    "   Current file location: /Users/michele.brissoni/ProgettiGit/UndeadGrishnackh/_template_Python_/hooks/post_gen_project.py",
+    "",
+    "2. Open hooks/post_gen_project.py and examine current imports (lines 1-6):",
+    "   - File currently imports: os, subprocess",
+    "   - pathlib.Path is NOT currently imported - MUST BE ADDED",
+    "",
+    "3. Add pathlib import AFTER the os import (before subprocess):",
+    "   Add new line after 'import os':",
+    "   from pathlib import Path",
+    "",
+    "4. Add is_inside_git_repo() function after PROJECT_DIRECTORY definition (after line 6):",
+    "   Insert function before 'kata_name = ...' line to maintain proper code organization:",
+    "",
+    "```python",
+    "def is_inside_git_repo() -> bool:",
+    "    \"\"\"Detect if current directory is inside a git repository.",
+    "",
+    "    Traverses parent directories looking for .git (directory or file).",
+    "    Returns True on first match, False if filesystem root reached.",
+    "",
+    "    Handles:",
+    "    - Standard .git directories",
+    "    - Git worktrees (.git as file)",
+    "    - Submodules (.git as file)",
+    "",
+    "    Reference: ADR-001-git-detection-algorithm.md",
+    "",
+    "    Returns:",
+    "        bool: True if inside git repo, False otherwise",
+    "    \"\"\"",
+    "    current = Path.cwd()",
+    "    while current != current.parent:  # Stop at filesystem root",
+    "        git_path = current / \".git\"",
+    "        if git_path.exists():  # Works for both directory and file",
+    "            return True",
+    "        current = current.parent",
+    "    # Check root directory itself",
+    "    return (current / \".git\").exists()",
+    "```",
+    "",
+    "5. Verify implementation matches ADR-001 exactly (algorithm specification section)",
+    "",
+    "6. Run acceptance tests to verify implementation passes user expectations:",
+    "   cd /Users/michele.brissoni/ProgettiGit/UndeadGrishnackh/_template_Python_",
+    "   pipenv run pytest tests/acceptance/steps/test_US001_git_detection_steps.py -v"
+  ],
+  "acceptance_criteria": [
+    "pathlib.Path import added to hooks/post_gen_project.py (after os import)",
+    "is_inside_git_repo() function added with exact signature: is_inside_git_repo() -> bool",
+    "Function implementation matches ADR-001 algorithm specification exactly",
+    "Docstring present with clear behavior description and ADR reference",
+    "All acceptance test scenarios in test_US001_git_detection_steps.py pass - specifically:",
+    "  - hook_detects_git() step passes (existing git repository detection)",
+    "  - hook_traverses_parents() step passes (parent directory traversal)",
+    "  - hook_detects_worktree() step passes (git worktree .git file handling)",
+    "  - hook_no_git_found() step passes (returns False when no git in tree)",
+    "  - hook_traverses_to_root() step passes (reaches filesystem root safely)",
+    "Green phase achieved: No 'Red' or 'Refactor' phases attempted, minimal code only"
+  ],
+  "verification": {
+    "command": "pipenv run pytest tests/acceptance/steps/test_US001_git_detection_steps.py::*hook_detects_git* tests/acceptance/steps/test_US001_git_detection_steps.py::*hook_traverses_parents* tests/acceptance/steps/test_US001_git_detection_steps.py::*hook_detects_worktree* tests/acceptance/steps/test_US001_git_detection_steps.py::*hook_no_git_found* tests/acceptance/steps/test_US001_git_detection_steps.py::*hook_traverses_to_root* -v",
+    "expected": "All relevant acceptance test steps pass, specifically the 5 key test scenarios for is_inside_git_repo() function behavior validation",
+    "verification_checklist": [
+      "Import statement: 'from pathlib import Path' exists after 'import os'",
+      "Function definition: 'def is_inside_git_repo() -> bool:' exists",
+      "Algorithm matches ADR-001 exactly (use diff or manual review)",
+      "Function can be called: from hooks.post_gen_project import is_inside_git_repo",
+      "All acceptance test steps pass without modification"
+    ]
+  },
+  "estimated_minutes": 15,
+  "dependencies": [
+    "02-03"
+  ],
+  "state": {
+    "status": "pending",
+    "ready_for_execution": false
+  },
+  "agent_notes": "TDD Green Phase - Implement ONLY what is needed to pass acceptance tests. Key points:\n1. Copy algorithm from ADR-001 verbatim - do not modify or 'optimize'\n2. Add pathlib import only - do not add os.path alternatives\n3. No conditional logic, error handling beyond the algorithm, or parameter variations\n4. Function must be importable from hooks.post_gen_project module for subsequent steps\n5. Acceptance tests drive this implementation - use them as specification\n6. Next phase (Refactor) will improve code organization; this phase is minimal only"
+}

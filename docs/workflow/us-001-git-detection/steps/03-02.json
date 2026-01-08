@@ -1,0 +1,75 @@
+{
+  "task_id": "03-02",
+  "phase": 3,
+  "step": 2,
+  "name": "Verify unit test coverage",
+  "description": "Run unit tests with coverage to ensure implementation is fully tested. Target: >90% coverage for is_inside_git_repo() function.",
+  "motivation": "Confirm adequate test coverage for git detection to ensure the implementation is well-tested before proceeding to refactoring phases.",
+  "context": {
+    "files_to_read": [
+      "hooks/post_gen_project.py (contains is_inside_git_repo function from 03-01)",
+      "tests/unit/test_git_detection.py (contains 7 unit tests from phase 2)"
+    ],
+    "files_to_modify": [
+      "tests/unit/test_git_detection.py (only if coverage gaps require new tests)"
+    ],
+    "files_to_create": [],
+    "prerequisites": [
+      "Step 03-01 completed (is_inside_git_repo function fully implemented)",
+      "All 7 unit tests passing (from step 03-01 verification)"
+    ],
+    "reference_documents": [
+      "docs/architecture/adrs/ADR-001-git-detection-algorithm.md"
+    ],
+    "coverage_target": {
+      "function": "is_inside_git_repo()",
+      "minimum_coverage": 90,
+      "unit_of_measurement": "line coverage percentage"
+    }
+  },
+  "instructions": [
+    "1. Ensure pytest-cov is available in environment:",
+    "   pipenv run pip list | grep pytest-cov",
+    "   If not present, run: pipenv install pytest-cov --dev",
+    "",
+    "2. Run tests with coverage report for the is_inside_git_repo function:",
+    "   pipenv run pytest tests/unit/test_git_detection.py --cov=hooks.post_gen_project --cov-report=term-missing",
+    "",
+    "3. Examine the coverage output to identify the is_inside_git_repo() coverage percentage:",
+    "   - Target: >90% coverage for the function's code lines",
+    "   - Look for MISSING column showing uncovered lines",
+    "   - Note the line numbers that are not executed",
+    "",
+    "4. If coverage gaps exist (coverage <90%):",
+    "   a. Identify specific code paths that lack test coverage",
+    "   b. Add targeted test methods to cover those paths",
+    "   c. Examples of paths to cover:",
+    "      - Early return when .git found at current level",
+    "      - while loop iteration through parent directories",
+    "      - Root directory check (last check)",
+    "   d. Re-run coverage command to verify improvement",
+    "",
+    "5. Verify final coverage meets target (>90%):",
+    "   pipenv run pytest tests/unit/test_git_detection.py --cov=hooks.post_gen_project --cov-report=term-missing 2>&1 | tail -20"
+  ],
+  "acceptance_criteria": [
+    "All unit tests pass: 7/7 tests passing (verified via pytest output)",
+    "Coverage metric: >90% line coverage for is_inside_git_repo() function",
+    "All code branches covered: while loop execution, if conditions, root directory check",
+    "Coverage report generated: term-missing format shows specific uncovered lines (if any)",
+    "No gaps in critical paths: .git detection, directory traversal, boundary conditions all covered"
+  ],
+  "verification": {
+    "command": "pipenv run pytest tests/unit/test_git_detection.py --cov=hooks.post_gen_project --cov-report=term-missing",
+    "expected": "All 7 tests pass AND coverage output shows >90% for hooks/post_gen_project.py (is_inside_git_repo lines)"
+  },
+  "estimated_minutes": 15,
+  "dependencies": [
+    "03-01"
+  ],
+  "state": {
+    "status": "pending",
+    "ready_for_execution": false
+  },
+  "agent_notes": "Coverage measurement requires pytest-cov. If not installed, the tests still pass but coverage report won't be generated."
+}
