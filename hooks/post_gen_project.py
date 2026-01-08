@@ -46,6 +46,31 @@ def run_command(command):
         )
 
 
+def setup_environment():
+    """Set up development environment.
+
+    Always runs regardless of git repository status.
+    Operations:
+    - Install dev dependencies via pipenv
+    - Fix typing-extensions packaging
+    - Run dry test cycle
+    - Install git pre-commit hooks
+    """
+    print("Setting up development environment...")
+
+    print("  Creating virtual environment...")
+    run_command("pipenv install --dev")
+
+    print("  Fixing typing-extensions packaging...")
+    run_command("pipenv run forceTypingExtensions")
+
+    print("  Running dry test cycle...")
+    run_command("pipenv run tests")
+
+    print("  Installing git hooks...")
+    run_command("pipenv run install_pre_hooks")
+
+
 if __name__ == "__main__":
     print("👷🏻 Creating virtual environment...")
     run_command("pipenv install --dev")
