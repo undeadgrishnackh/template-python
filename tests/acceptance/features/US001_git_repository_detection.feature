@@ -19,9 +19,9 @@ Feature: Smart Git Repository Detection
     And the hook skips git initialization
     And the hook skips adding git remote origin
     And the hook skips pushing to remote
+    And the hook skips pre-commit installation in integration mode
+    And the hook skips validation commit in integration mode
     But the hook installs development dependencies
-    And the hook installs pre-commit hooks
-    And the hook creates a validation commit with message containing "source"
     And Alex continues workflow without manual intervention
 
   @happy-path @monorepo
@@ -78,7 +78,7 @@ Feature: Smart Git Repository Detection
     And the project has an existing git repository
     When Alex generates a Python scaffold with directory name "source"
     Then the hook does not change the current branch
-    And the validation commit is created on "feature/trading-api"
+    And the hook skips validation commit in integration mode
     And the branch remains "feature/trading-api" after scaffold completion
 
   # Error Scenarios

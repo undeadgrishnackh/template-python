@@ -206,19 +206,21 @@ def alex_generates_scaffold(test_env: TestEnvironment, hook_service: HookService
     )
 
     # Issue 3: Use factory functions for ScaffoldResult construction
+    # Integration mode fix: pre-commit install and git commit are SKIPPED
+    # because parent repo manages its own hooks and user commits manually.
     if is_integration:
         test_env.result = create_success_result(
             generated_directory=test_env.work_dir / name,
             commands_executed=[
                 "pipenv install --dev",
-                "pre-commit install",
-                "git add --all",
-                "git commit",
             ],
             commands_skipped=[
                 "gh repo create",
                 "git init",
                 "git remote add origin",
+                "pre-commit install",  # Skipped: parent repo manages hooks
+                "git add --all",
+                "git commit",  # Skipped: user commits manually
                 "git push",
             ],
         )
@@ -278,17 +280,19 @@ def sam_runs_cookiecutter(test_env: TestEnvironment, hook_service: HookService, 
             ],
         )
     else:
+        # Integration mode fix: pre-commit install and git commit are SKIPPED
         test_env.result = create_success_result(
             generated_directory=test_env.work_dir / test_env.directory_name,
             commands_executed=[
                 "pipenv install --dev",
-                "pre-commit install",
-                "git commit",
             ],
             commands_skipped=[
                 "gh repo create",
                 "git init",
                 "git remote add origin",
+                "pre-commit install",  # Skipped: parent repo manages hooks
+                "git add --all",
+                "git commit",  # Skipped: user commits manually
                 "git push",
             ],
         )
@@ -306,18 +310,20 @@ def developer_generates_scaffold(test_env: TestEnvironment, hook_service: HookSe
     )
 
     # Issue 3: Use factory function for ScaffoldResult construction
+    # Integration mode fix: pre-commit install and git commit are SKIPPED
     if is_integration:
         test_env.result = create_success_result(
             generated_directory=test_env.work_dir / test_env.directory_name,
             commands_executed=[
                 "pipenv install --dev",
-                "pre-commit install",
-                "git commit",
             ],
             commands_skipped=[
                 "gh repo create",
                 "git init",
                 "git remote add origin",
+                "pre-commit install",  # Skipped: parent repo manages hooks
+                "git add --all",
+                "git commit",  # Skipped: user commits manually
                 "git push",
             ],
         )
@@ -386,14 +392,42 @@ def hook_installs_deps(test_env: TestEnvironment):
 
 @then("the hook installs pre-commit hooks")
 def hook_installs_precommit(test_env: TestEnvironment):
-    """Verify pre-commit install was executed."""
-    assert "pre-commit install" in test_env.result.commands_executed, "pre-commit install should always execute"
+    """Verify pre-commit install was executed (standalone mode only)."""
+    assert "pre-commit install" in test_env.result.commands_executed, (
+        "pre-commit install should execute in standalone mode"
+    )
+
+
+@then("the hook skips pre-commit installation in integration mode")
+def hook_skips_precommit_integration(test_env: TestEnvironment):
+    """Verify pre-commit install was skipped in integration mode.
+
+    Integration mode fix: pre-commit hooks would install to PARENT repo's
+    .git/hooks/, but reference child's .pre-commit-config.yaml with pipenv
+    commands that fail because parent's Pipfile doesn't have ruff, bandit, etc.
+    """
+    assert "pre-commit install" in test_env.result.commands_skipped, (
+        "pre-commit install should be skipped in integration mode (parent repo manages its own hooks)"
+    )
+
+
+@then("the hook skips validation commit in integration mode")
+def hook_skips_commit_integration(test_env: TestEnvironment):
+    """Verify validation commit was skipped in integration mode.
+
+    Integration mode fix: git commit would trigger pre-commit hooks from
+    parent's .git/hooks/, which fail due to Pipfile mismatch.
+    User should commit manually after reviewing generated files.
+    """
+    assert "git commit" in test_env.result.commands_skipped, (
+        "git commit should be skipped in integration mode (user commits manually when ready)"
+    )
 
 
 @then(parsers.parse('the hook creates a validation commit with message containing "{text}"'))
 def hook_creates_commit(test_env: TestEnvironment, text: str):
-    """Verify validation commit was created."""
-    assert "git commit" in test_env.result.commands_executed, "git commit should execute in integration mode"
+    """Verify validation commit was created (standalone mode only)."""
+    assert "git commit" in test_env.result.commands_executed, "git commit should execute in standalone mode"
 
 
 @then("Alex continues workflow without manual intervention")

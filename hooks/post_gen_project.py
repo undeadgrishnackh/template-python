@@ -53,7 +53,9 @@ def setup_environment():
     - Install dev dependencies via pipenv
     - Fix typing-extensions packaging
     - Run dry test cycle
-    - Install git pre-commit hooks
+
+    Note: Pre-commit hooks are installed separately by install_pre_commit_hooks()
+    only in standalone mode. In integration mode, parent repo manages its hooks.
     """
     print("Setting up development environment...")
 
@@ -65,9 +67,6 @@ def setup_environment():
 
     print("  Running dry test cycle...")
     run_command("pipenv run tests")
-
-    print("  Installing git hooks...")
-    run_command("pipenv run install_pre_hooks")
 
 
 def initialize_git_repository(kata_name: str) -> None:
@@ -103,7 +102,13 @@ def initialize_git_repository(kata_name: str) -> None:
 def install_pre_commit_hooks() -> None:
     """Install pre-commit hooks for local quality gate.
 
-    Always runs regardless of git repository status.
+    STANDALONE MODE ONLY:
+    In integration mode, this is skipped because:
+    1. pre-commit install would put hooks in PARENT repo's .git/hooks/
+    2. Hooks reference child's .pre-commit-config.yaml with pipenv run ruff
+    3. Parent's Pipfile doesn't have ruff, causing hook failures
+
+    The parent repo should manage its own pre-commit hooks.
     """
     print("Installing pre-commit hooks...")
     run_command("pipenv run install_pre_hooks")
@@ -112,9 +117,13 @@ def install_pre_commit_hooks() -> None:
 def create_validation_commit(kata_name: str) -> None:
     """Create validation commit with scaffolding.
 
-    Always runs to commit the generated files.
-    In integration mode: commits to current branch
-    In standalone mode: commits to main branch
+    STANDALONE MODE ONLY:
+    In integration mode, this is skipped because:
+    1. Pre-commit hooks would run from PARENT repo's .git/hooks/
+    2. Hooks fail due to Pipfile mismatch (parent lacks ruff, bandit)
+    3. User should commit manually after reviewing generated files
+
+    In standalone mode: commits to main branch with all generated files.
 
     Args:
         kata_name: Name used in commit message
@@ -196,11 +205,19 @@ def main():
     Execution flow:
     1. Detect if inside existing git repository
     2. Setup environment (always)
-    3. Initialize git repository (if not inside existing repo)
-    4. Install pre-commit hooks (always)
-    5. Create validation commit (always)
-    6. Push to remote (only if new repository)
+    3. Initialize git repository (standalone only)
+    4. Install pre-commit hooks (standalone only)
+    5. Create validation commit (standalone only)
+    6. Push to remote (standalone only)
     7. Open IDE (if requested) - US-003
+
+    Integration Mode Behavior (inside existing git repo):
+    - Skips pre-commit install: Parent repo manages its own hooks
+    - Skips validation commit: User commits manually after review
+    - Skips push: User manages their own remote
+
+    This prevents the bug where pre-commit hooks fail because they're
+    installed to parent's .git/hooks/ but reference child's Pipfile.
 
     Reference: docs/architecture/architecture.md Section 5
     """
@@ -212,6 +229,9 @@ def main():
 
     if inside_git_repo:
         print("Detected existing git repository - running in integration mode")
+        print("  Note: Pre-commit hooks and commit will be skipped.")
+        print("  The parent repository should manage its own hooks.")
+        print("  Please commit the generated files manually when ready.")
     else:
         print("No existing git repository - running in standalone mode")
 
@@ -224,11 +244,22 @@ def main():
     else:
         print("Skipping repository creation (inside existing repo)")
 
-    # Step 4: Install pre-commit hooks (always)
-    install_pre_commit_hooks()
+    # Step 4: Install pre-commit hooks (standalone only)
+    # In integration mode, parent repo manages its own hooks.
+    # Installing hooks here would put them in parent's .git/hooks/
+    # but reference child's .pre-commit-config.yaml, causing failures.
+    if not inside_git_repo:
+        install_pre_commit_hooks()
+    else:
+        print("Skipping pre-commit install (parent repo manages hooks)")
 
-    # Step 5: Create validation commit (always)
-    create_validation_commit(kata_name)
+    # Step 5: Create validation commit (standalone only)
+    # In integration mode, user should commit manually after review.
+    # Pre-commit hooks in parent would fail due to Pipfile mismatch.
+    if not inside_git_repo:
+        create_validation_commit(kata_name)
+    else:
+        print("Skipping validation commit (commit manually when ready)")
 
     # Step 6: Push to remote (standalone only)
     if not inside_git_repo:

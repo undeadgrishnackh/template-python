@@ -16,12 +16,15 @@ from typing import TYPE_CHECKING
 import pytest
 from pytest_bdd import given, parsers, scenarios, then, when
 
+
 if TYPE_CHECKING:
-    from typing import Any, Generator
+    from collections.abc import Generator
+    from typing import Any
 
 # Import function under test
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent / "hooks"))
 from post_gen_project import is_inside_git_repo
+
 
 # Load all scenarios from feature file
 scenarios("../features/US001_git_repository_detection.feature")
@@ -122,11 +125,7 @@ def git_repo_two_levels_up(test_context: dict[str, Any]) -> None:
     test_context["git_repo_path"] = git_dir
 
 
-@given(
-    parsers.parse(
-        "{persona} is in a kata directory with no git repository in parent tree"
-    )
-)
+@given(parsers.parse("{persona} is in a kata directory with no git repository in parent tree"))
 def persona_in_clean_kata_dir(test_context: dict[str, Any], persona: str) -> None:
     """Set up persona in a clean kata directory without git."""
     test_context["persona"] = persona
@@ -140,12 +139,8 @@ def persona_in_clean_kata_dir(test_context: dict[str, Any], persona: str) -> Non
 # =============================================================================
 
 
-@when(
-    parsers.parse('{persona} generates a Python scaffold with directory name "{name}"')
-)
-def generate_scaffold_with_name(
-    test_context: dict[str, Any], persona: str, name: str
-) -> None:
+@when(parsers.parse('{persona} generates a Python scaffold with directory name "{name}"'))
+def generate_scaffold_with_name(test_context: dict[str, Any], persona: str, name: str) -> None:
     """Generate scaffold and detect git repository."""
     test_context["directory_name"] = name
     project_dir = test_context["project_dir"]
@@ -154,9 +149,7 @@ def generate_scaffold_with_name(
 
 
 @when(parsers.parse('{persona} runs the cookiecutter with kata name "{kata_name}"'))
-def run_cookiecutter_with_kata_name(
-    test_context: dict[str, Any], persona: str, kata_name: str
-) -> None:
+def run_cookiecutter_with_kata_name(test_context: dict[str, Any], persona: str, kata_name: str) -> None:
     """Run cookiecutter with specified kata name."""
     test_context["kata_name"] = kata_name
     project_dir = test_context["project_dir"]
@@ -178,9 +171,7 @@ def hook_detects_existing_repo(test_context: dict[str, Any]) -> None:
 @then("the hook skips GitHub repository creation")
 def hook_skips_github_creation(test_context: dict[str, Any]) -> None:
     """Verify hook would skip GitHub repository creation."""
-    assert test_context["hook_result"] is True, (
-        "Hook should detect repo to skip creation"
-    )
+    assert test_context["hook_result"] is True, "Hook should detect repo to skip creation"
 
 
 @then("the hook skips git initialization")
@@ -206,22 +197,42 @@ def hook_installs_dev_deps(test_context: dict[str, Any]) -> None:
     """Verify hook would install dependencies (always runs)."""
     # Dependencies install regardless of git detection
     # This step validates the conditional flow design
-    pass
 
 
 @then("the hook installs pre-commit hooks")
 def hook_installs_precommit(test_context: dict[str, Any]) -> None:
-    """Verify hook would install pre-commit hooks (always runs)."""
-    pass
+    """Verify hook would install pre-commit hooks (standalone mode only)."""
+    # In standalone mode (hook_result is False), pre-commit hooks are installed
+    assert test_context["hook_result"] is False
 
 
-@then(
-    parsers.parse(
-        'the hook creates a validation commit with message containing "{msg}"'
-    )
-)
+@then("the hook skips pre-commit installation in integration mode")
+def hook_skips_precommit_integration(test_context: dict[str, Any]) -> None:
+    """Verify hook skips pre-commit install in integration mode.
+
+    Integration mode fix: pre-commit hooks would install to PARENT repo's
+    .git/hooks/, but reference child's .pre-commit-config.yaml with pipenv
+    commands that fail because parent's Pipfile doesn't have ruff, bandit, etc.
+    """
+    # In integration mode (hook_result is True), pre-commit is skipped
+    assert test_context["hook_result"] is True
+
+
+@then("the hook skips validation commit in integration mode")
+def hook_skips_commit_integration(test_context: dict[str, Any]) -> None:
+    """Verify hook skips validation commit in integration mode.
+
+    Integration mode fix: git commit would trigger pre-commit hooks from
+    parent's .git/hooks/, which fail due to Pipfile mismatch.
+    User should commit manually after reviewing generated files.
+    """
+    # In integration mode (hook_result is True), commit is skipped
+    assert test_context["hook_result"] is True
+
+
+@then(parsers.parse('the hook creates a validation commit with message containing "{msg}"'))
 def hook_creates_commit_with_message(test_context: dict[str, Any], msg: str) -> None:
-    """Verify hook would create commit with message."""
+    """Verify hook would create commit with message (standalone mode only)."""
     assert test_context["directory_name"] == msg or test_context["kata_name"] == msg
 
 
@@ -330,7 +341,6 @@ def developer_near_root(test_context: dict[str, Any]) -> None:
 def no_git_in_parents(test_context: dict[str, Any]) -> None:
     """Ensure no .git exists in parent directories of temp path."""
     # tmp_path is isolated, no .git should exist
-    pass
 
 
 @given("a developer is working in a symlinked project directory")
@@ -358,9 +368,7 @@ def symlink_target_has_git(test_context: dict[str, Any]) -> None:
 
 
 @given(parsers.parse('{persona} is working on a feature branch named "{branch_name}"'))
-def persona_on_feature_branch(
-    test_context: dict[str, Any], persona: str, branch_name: str
-) -> None:
+def persona_on_feature_branch(test_context: dict[str, Any], persona: str, branch_name: str) -> None:
     """Set up persona on a feature branch."""
     test_context["persona"] = persona
     test_context["branch_name"] = branch_name
@@ -414,7 +422,6 @@ def hook_detects_worktree(test_context: dict[str, Any]) -> None:
 def hook_traverses_to_root(test_context: dict[str, Any]) -> None:
     """Verify hook traverses to filesystem root."""
     # Traversal happens during detection
-    pass
 
 
 @then("the hook correctly determines no repository exists")
@@ -444,7 +451,11 @@ def hook_preserves_branch(test_context: dict[str, Any]) -> None:
 
 @then(parsers.parse('the validation commit is created on "{branch_name}"'))
 def commit_on_branch(test_context: dict[str, Any], branch_name: str) -> None:
-    """Verify commit would be on specified branch."""
+    """Verify commit would be on specified branch (standalone mode only).
+
+    Note: This step is for standalone mode. In integration mode, the validation
+    commit is skipped entirely, so this step won't be reached.
+    """
     assert test_context["branch_name"] == branch_name
 
 
@@ -513,14 +524,8 @@ def git_not_installed(test_context: dict[str, Any]) -> None:
 # =============================================================================
 
 
-@when(
-    parsers.parse(
-        '{persona} generates a Python scaffold with directory name "{directory_name}"'
-    )
-)
-def persona_generates_scaffold_with_dir_name(
-    test_context: dict[str, Any], persona: str, directory_name: str
-) -> None:
+@when(parsers.parse('{persona} generates a Python scaffold with directory name "{directory_name}"'))
+def persona_generates_scaffold_with_dir_name(test_context: dict[str, Any], persona: str, directory_name: str) -> None:
     """Generate scaffold with directory name (handles permission scenario)."""
     test_context["directory_name"] = directory_name
     project_dir = test_context["project_dir"]
@@ -569,7 +574,6 @@ def hook_fails_github_auth_error(test_context: dict[str, Any]) -> None:
 def failure_before_file_modification(test_context: dict[str, Any]) -> None:
     """Verify failure timing."""
     # Detection phase completes before file operations
-    pass
 
 
 @then("the error message includes remediation steps")
@@ -578,7 +582,6 @@ def error_includes_remediation(test_context: dict[str, Any]) -> None:
 
     Note: Actual error message comes from gh cli, not detection.
     """
-    pass
 
 
 @then("the hook fails with a clear error about missing git")
@@ -597,4 +600,3 @@ def error_includes_install_instructions(test_context: dict[str, Any]) -> None:
 
     Note: Actual error message comes from subprocess, not detection.
     """
-    pass
