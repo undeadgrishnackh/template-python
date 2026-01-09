@@ -1,0 +1,78 @@
+repos:
+  # =============================================================================
+  # FORMATTING (runs first - auto-fixes code style)
+  # =============================================================================
+  - repo: local
+    hooks:
+      - id: ruff-format
+        name: ruff-format (Black replacement)
+        entry: pipenv run ruff format
+        language: system
+        types: [python]
+
+  # =============================================================================
+  # LINTING (runs on formatted code)
+  # =============================================================================
+  - repo: local
+    hooks:
+      - id: ruff-lint
+        name: ruff-lint (Flake8 + Pylint + isort replacement)
+        entry: pipenv run ruff check --fix
+        language: system
+        types: [python]
+
+  # =============================================================================
+  # TYPE CHECKING (only on modules/, not tests)
+  # =============================================================================
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy (type checking)
+        entry: pipenv run mypy
+        language: system
+        types: [python]
+        files: ^modules/
+        exclude: ^tests/
+
+  # =============================================================================
+  # SECURITY SCANNING
+  # =============================================================================
+  - repo: local
+    hooks:
+      - id: bandit
+        name: bandit (security scanner)
+        entry: pipenv run bandit -r modules/ -x tests
+        language: system
+        types: [python]
+        pass_filenames: false
+
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        name: detect-secrets (credentials scanner)
+        exclude: \.secrets\.baseline$
+
+  # =============================================================================
+  # GENERAL HYGIENE
+  # =============================================================================
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+        args: [--allow-multiple-documents]
+      - id: check-added-large-files
+        args: ["--maxkb=1000"]
+      - id: check-merge-conflict
+      - id: debug-statements
+
+  # =============================================================================
+  # COMMIT MESSAGE VALIDATION
+  # =============================================================================
+  - repo: https://github.com/commitizen-tools/commitizen
+    rev: v4.2.2
+    hooks:
+      - id: commitizen
+        stages: [commit-msg]

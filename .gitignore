@@ -165,3 +165,5 @@ requirements.txt*
 
 # chrome web driver
 downloaded_files/
+
+htmlcov/

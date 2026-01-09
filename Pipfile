@@ -7,8 +7,50 @@ name = "pypi"
 packaging = "*"
 
 [dev-packages]
+# Testing
 pytest = "*"
 pytest-bdd = "*"
+pytest-describe-it = "*"
+pytest-html = "*"
+pytest-cov = "*"
+pytest-pspec = "*"
+pytest-mock = "*"
+pytest-describe = "*"
+pytest-watch = "*"
+# Code Quality (Ruff replaces: Black + Flake8 + isort + Pylint)
+ruff = "*"
+mypy = "*"
+# Security
+bandit = {extras = ["toml"], version = "*"}
+detect-secrets = "*"
+# Git & Release
+python-semantic-release = "*"
+commitizen = "*"
+pre-commit = "*"
+# Reporting
+weasyprint = "*"
 
 [requires]
 python_version = "3.10"
+
+[scripts]
+UnitTests = "pytest tests/unit --pspec --tb=long -l"
+IntegrationTests = "pytest tests/integration --pspec --tb=long -l"
+E2ETests = "pytest tests/e2e --pspec --tb=long -l"
+ReleaseTests = "pytest tests/release --pspec --tb=long -l"
+ABTests = "pytest tests/ab --pspec --tb=long -l"
+tests = "pytest tests/ --pspec --tb=long -l"
+coverage = "pytest tests/ -q --tb=no --no-header --cov-report term --cov='.' --cache-clear --rootdir='.'"
+coverageHtml = "pytest tests/ --pspec --tb=long -l --cov-report html:reports/coverage --cov='.' --html=reports/test-report.html --self-contained-html --cache-clear --rootdir='.'"
+coveragePdf = "weasyprint reports/test-report.html reports/test-report.pdf"
+coverageDevOps = "pytest tests/ --pspec --junitxml=junit/test-result.xml --cov-report=xml --cov-report=html:reports/coverage --cov='.' --html=reports/test-report.html --self-contained-html --tb=long -l --cache-clear --rootdir='.'"
+watchUnit = "ptw tests/unit -- --tb=short"
+watchIntegration = "ptw tests/integration -- --tb=short"
+watchE2E = "ptw tests/e2e -- --tb=short"
+install_pre_hooks = "pre-commit install"
+lint = "ruff check modules tests"
+format = "ruff format modules tests"
+lintFix = "ruff check --fix modules tests"
+security = "bandit -c pyproject.toml -r modules/"
+secretsScan = "detect-secrets scan --baseline .secrets.baseline"  # pragma: allowlist secret
+forceTypingExtensions = "python -m pip install typing-extensions"
