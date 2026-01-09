@@ -37,6 +37,7 @@ class TestEnvironment:
     kata_name: Optional[str] = None
     ide_option: Optional[str] = None
     result: Optional["ScaffoldResult"] = None
+    current_branch: Optional[str] = None
 
 
 @pytest.fixture
@@ -137,6 +138,83 @@ def git_worktree(work_dir: Path) -> Path:
     )
 
     return worktree_dir
+
+
+@pytest.fixture
+def symlinked_git_repo(work_dir: Path) -> Path:
+    """Create a symlinked directory pointing to a git repository.
+
+    Returns:
+        Path to the symlink that points to a directory with a git repo.
+    """
+    # Create the actual git repository
+    actual_repo = work_dir / "actual_project"
+    actual_repo.mkdir(parents=True)
+
+    subprocess.run(["git", "init"], cwd=actual_repo, capture_output=True, check=True)
+    subprocess.run(
+        ["git", "config", "user.email", "test@example.com"],
+        cwd=actual_repo,
+        capture_output=True,
+        check=True,
+    )
+    subprocess.run(
+        ["git", "config", "user.name", "Test User"],
+        cwd=actual_repo,
+        capture_output=True,
+        check=True,
+    )
+
+    # Create a symlink pointing to the actual repo
+    symlink_path = work_dir / "symlinked_project"
+    symlink_path.symlink_to(actual_repo)
+
+    return symlink_path
+
+
+@pytest.fixture
+def git_repo_on_branch(work_dir: Path) -> tuple[Path, str]:
+    """Create a git repository on a specific feature branch.
+
+    Returns:
+        Tuple of (repo_path, branch_name)
+    """
+    branch_name = "feature/trading-api"
+
+    subprocess.run(["git", "init"], cwd=work_dir, capture_output=True, check=True)
+    subprocess.run(
+        ["git", "config", "user.email", "test@example.com"],
+        cwd=work_dir,
+        capture_output=True,
+        check=True,
+    )
+    subprocess.run(
+        ["git", "config", "user.name", "Test User"],
+        cwd=work_dir,
+        capture_output=True,
+        check=True,
+    )
+
+    # Create an initial commit (required before creating branches)
+    readme = work_dir / "README.md"
+    readme.write_text("# Test Project\n")
+    subprocess.run(["git", "add", "."], cwd=work_dir, capture_output=True, check=True)
+    subprocess.run(
+        ["git", "commit", "-m", "Initial commit"],
+        cwd=work_dir,
+        capture_output=True,
+        check=True,
+    )
+
+    # Create and checkout the feature branch
+    subprocess.run(
+        ["git", "checkout", "-b", branch_name],
+        cwd=work_dir,
+        capture_output=True,
+        check=True,
+    )
+
+    return work_dir, branch_name
 
 
 @pytest.fixture

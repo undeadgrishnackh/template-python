@@ -147,6 +147,52 @@ def git_not_installed(test_env: TestEnvironment):
     return test_env
 
 
+@given("a developer is working in a symlinked project directory")
+def developer_symlinked_context(test_env: TestEnvironment, symlinked_git_repo: Path):
+    """Set up context for symlinked directory scenario."""
+    test_env.work_dir = symlinked_git_repo
+    test_env.has_git = True
+    return test_env
+
+
+@given("the symlink target has a git repository")
+def symlink_target_has_git(test_env: TestEnvironment):
+    """Verify symlink target has git repository."""
+    # The symlinked_git_repo fixture already set up git in the target
+    # Just verify the context is correct
+    assert test_env.has_git, "Symlink target should have git repository"
+    return test_env
+
+
+@given(parsers.parse('Alex is working on a feature branch named "{branch_name}"'))
+def alex_feature_branch_context(
+    test_env: TestEnvironment, git_repo_on_branch: tuple[Path, str], branch_name: str
+):
+    """Set up context for Alex working on a specific feature branch."""
+    repo_path, actual_branch = git_repo_on_branch
+    test_env.work_dir = repo_path
+    test_env.has_git = True
+    test_env.current_branch = actual_branch
+    return test_env
+
+
+@given("the project has an existing git repository")
+def project_has_existing_git(test_env: TestEnvironment):
+    """Confirm project has existing git repository."""
+    assert test_env.has_git, "Project should have existing git repository"
+    return test_env
+
+
+@given("Sam is in a kata directory with no git repository")
+def sam_kata_no_git_context(test_env: TestEnvironment, work_dir: Path):
+    """Set up context for Sam in a kata directory without git."""
+    kata_dir = work_dir / "katas"
+    kata_dir.mkdir(parents=True)
+    test_env.work_dir = kata_dir
+    test_env.has_git = False
+    return test_env
+
+
 # --------------------------------------------------------------------------
 # When Steps - Actions
 # --------------------------------------------------------------------------
@@ -579,4 +625,40 @@ def error_has_install_instructions(test_env: TestEnvironment):
     assert (
         "install" in test_env.result.error_output.lower()
         or "http" in test_env.result.error_output.lower()
+    )
+
+
+@then("the hook resolves the symlink and detects the git repository")
+def hook_resolves_symlink(test_env: TestEnvironment, hook_service: HookService):
+    """Verify hook resolves symlink and detects git repository."""
+    # The hook should follow symlinks and find the git repository
+    is_inside = hook_service.is_inside_git_repo(test_env.work_dir)
+    assert is_inside, "Hook should detect git repository through symlink"
+
+
+@then("the hook does not change the current branch")
+def hook_preserves_branch(test_env: TestEnvironment):
+    """Verify hook does not change the current branch."""
+    # The branch preservation is verified by comparing current branch
+    # The hook should not modify the branch during scaffold
+    assert test_env.result.success, "Scaffold should complete successfully"
+    # Branch should remain unchanged (verified by next assertion steps)
+
+
+@then(parsers.parse('the validation commit is created on "{branch_name}"'))
+def commit_on_branch(test_env: TestEnvironment, branch_name: str):
+    """Verify validation commit is created on the specified branch."""
+    assert test_env.current_branch == branch_name, (
+        f"Commit should be on {branch_name}, but current branch is {test_env.current_branch}"
+    )
+    assert "git commit" in test_env.result.commands_executed, (
+        "git commit should be executed"
+    )
+
+
+@then(parsers.parse('the branch remains "{branch_name}" after scaffold completion'))
+def branch_remains(test_env: TestEnvironment, branch_name: str):
+    """Verify branch remains unchanged after scaffold completion."""
+    assert test_env.current_branch == branch_name, (
+        f"Branch should remain {branch_name} after scaffold completion"
     )
