@@ -167,3 +167,5 @@ requirements.txt*
 downloaded_files/
 
 htmlcov/
+reports/
+last_report.html
