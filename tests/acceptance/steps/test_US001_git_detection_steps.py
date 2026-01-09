@@ -3,6 +3,9 @@ Step definitions for US-001: Smart Git Repository Detection.
 
 These steps implement the acceptance tests for detecting existing
 git repositories and conditionally skipping repository creation.
+
+Note: The shared @given("the cookiecutter template is available") step
+is defined in conftest.py for DRY compliance (Issue 1).
 """
 
 from pathlib import Path
@@ -10,23 +13,17 @@ from pathlib import Path
 from pytest_bdd import given, parsers, scenarios, then, when
 
 from tests.acceptance.conftest import TestEnvironment
-from tests.doubles.hook_service import HookService, ScaffoldResult
+from tests.doubles.hook_service import (
+    ERROR_GH_NOT_AUTHENTICATED,
+    ERROR_GIT_NOT_FOUND,
+    HookService,
+    create_error_result,
+    create_success_result,
+)
+
 
 # Load all scenarios from the feature file
 scenarios("../features/US001_git_repository_detection.feature")
-
-
-# --------------------------------------------------------------------------
-# Given Steps - Context Setup
-# --------------------------------------------------------------------------
-
-
-@given("the cookiecutter template is available")
-def template_available(template_dir: Path):
-    """Verify the cookiecutter template exists."""
-    assert template_dir.exists(), f"Template directory not found: {template_dir}"
-    assert (template_dir / "cookiecutter.json").exists(), "cookiecutter.json not found"
-    assert (template_dir / "hooks").exists(), "hooks directory not found"
 
 
 @given("Alex is the 5D-Wave agent working in a project directory")
@@ -57,7 +54,7 @@ def maria_services_context(test_env: TestEnvironment, work_dir: Path):
 @given("a git repository exists two levels up in the directory tree")
 def git_two_levels_up(test_env: TestEnvironment, nested_git_repo):
     """Create git repo structure with .git 2 levels up."""
-    git_root, nested_work = nested_git_repo
+    _git_root, nested_work = nested_git_repo
     test_env.work_dir = nested_work
     test_env.has_git = True
     test_env.git_levels_up = 2
@@ -165,9 +162,7 @@ def symlink_target_has_git(test_env: TestEnvironment):
 
 
 @given(parsers.parse('Alex is working on a feature branch named "{branch_name}"'))
-def alex_feature_branch_context(
-    test_env: TestEnvironment, git_repo_on_branch: tuple[Path, str], branch_name: str
-):
+def alex_feature_branch_context(test_env: TestEnvironment, git_repo_on_branch: tuple[Path, str], branch_name: str):
     """Set up context for Alex working on a specific feature branch."""
     repo_path, actual_branch = git_repo_on_branch
     test_env.work_dir = repo_path
@@ -199,9 +194,7 @@ def sam_kata_no_git_context(test_env: TestEnvironment, work_dir: Path):
 
 
 @when(parsers.parse('Alex generates a Python scaffold with directory name "{name}"'))
-def alex_generates_scaffold(
-    test_env: TestEnvironment, hook_service: HookService, name: str
-):
+def alex_generates_scaffold(test_env: TestEnvironment, hook_service: HookService, name: str):
     """Alex generates scaffold with specified directory name."""
     test_env.directory_name = name
 
@@ -212,33 +205,25 @@ def alex_generates_scaffold(
         start_path=test_env.work_dir,
     )
 
-    # Record expected operations based on mode
+    # Issue 3: Use factory functions for ScaffoldResult construction
     if is_integration:
-        test_env.result = ScaffoldResult(
-            success=True,
-            exit_code=0,
-            output="",
-            error_output="",
+        test_env.result = create_success_result(
             generated_directory=test_env.work_dir / name,
-            commands_skipped=[
-                "gh repo create",
-                "git init",
-                "git remote add origin",
-                "git push",
-            ],
             commands_executed=[
                 "pipenv install --dev",
                 "pre-commit install",
                 "git add --all",
                 "git commit",
             ],
+            commands_skipped=[
+                "gh repo create",
+                "git init",
+                "git remote add origin",
+                "git push",
+            ],
         )
     else:
-        test_env.result = ScaffoldResult(
-            success=True,
-            exit_code=0,
-            output="",
-            error_output="",
+        test_env.result = create_success_result(
             generated_directory=test_env.work_dir / name,
             commands_executed=[
                 "gh repo create",
@@ -255,17 +240,13 @@ def alex_generates_scaffold(
 
 
 @when(parsers.parse('Maria generates a Python scaffold with directory name "{name}"'))
-def maria_generates_scaffold(
-    test_env: TestEnvironment, hook_service: HookService, name: str
-):
+def maria_generates_scaffold(test_env: TestEnvironment, hook_service: HookService, name: str):
     """Maria generates scaffold with specified directory name."""
     return alex_generates_scaffold(test_env, hook_service, name)
 
 
 @when(parsers.parse('Sam runs the cookiecutter with kata name "{name}"'))
-def sam_runs_cookiecutter(
-    test_env: TestEnvironment, hook_service: HookService, name: str
-):
+def sam_runs_cookiecutter(test_env: TestEnvironment, hook_service: HookService, name: str):
     """Sam runs cookiecutter with kata name (standalone mode)."""
     test_env.kata_name = name
     # Simulate default directory name format: YYYYMMDD_kata_name
@@ -277,22 +258,13 @@ def sam_runs_cookiecutter(
         start_path=test_env.work_dir,
     )
 
+    # Issue 3 & 10: Use factory functions and error constants
     if not is_integration and not test_env.has_gh_cli:
         # GitHub CLI failure in standalone mode
-        test_env.result = ScaffoldResult(
-            success=False,
-            exit_code=1,
-            output="",
-            error_output="ERROR: GitHub CLI not authenticated. Run 'gh auth login' first.",
-            generated_directory=None,
-        )
+        test_env.result = create_error_result(ERROR_GH_NOT_AUTHENTICATED)
     elif not is_integration:
         # Full standalone mode
-        test_env.result = ScaffoldResult(
-            success=True,
-            exit_code=0,
-            output="",
-            error_output="",
+        test_env.result = create_success_result(
             generated_directory=test_env.work_dir / test_env.directory_name,
             commands_executed=[
                 "gh repo create",
@@ -306,22 +278,18 @@ def sam_runs_cookiecutter(
             ],
         )
     else:
-        test_env.result = ScaffoldResult(
-            success=True,
-            exit_code=0,
-            output="",
-            error_output="",
+        test_env.result = create_success_result(
             generated_directory=test_env.work_dir / test_env.directory_name,
+            commands_executed=[
+                "pipenv install --dev",
+                "pre-commit install",
+                "git commit",
+            ],
             commands_skipped=[
                 "gh repo create",
                 "git init",
                 "git remote add origin",
                 "git push",
-            ],
-            commands_executed=[
-                "pipenv install --dev",
-                "pre-commit install",
-                "git commit",
             ],
         )
     return test_env
@@ -337,36 +305,27 @@ def developer_generates_scaffold(test_env: TestEnvironment, hook_service: HookSe
         start_path=test_env.work_dir,
     )
 
+    # Issue 3: Use factory function for ScaffoldResult construction
     if is_integration:
-        test_env.result = ScaffoldResult(
-            success=True,
-            exit_code=0,
-            output="",
-            error_output="",
+        test_env.result = create_success_result(
             generated_directory=test_env.work_dir / test_env.directory_name,
+            commands_executed=[
+                "pipenv install --dev",
+                "pre-commit install",
+                "git commit",
+            ],
             commands_skipped=[
                 "gh repo create",
                 "git init",
                 "git remote add origin",
                 "git push",
             ],
-            commands_executed=[
-                "pipenv install --dev",
-                "pre-commit install",
-                "git commit",
-            ],
         )
     return test_env
 
 
-@when(
-    parsers.parse(
-        'the developer generates a Python scaffold with directory name "{name}"'
-    )
-)
-def developer_generates_scaffold_with_name(
-    test_env: TestEnvironment, hook_service: HookService, name: str
-):
+@when(parsers.parse('the developer generates a Python scaffold with directory name "{name}"'))
+def developer_generates_scaffold_with_name(test_env: TestEnvironment, hook_service: HookService, name: str):
     """Developer generates scaffold with specific directory name."""
     return alex_generates_scaffold(test_env, hook_service, name)
 
@@ -374,16 +333,11 @@ def developer_generates_scaffold_with_name(
 @when("the developer runs the cookiecutter")
 def developer_runs_cookiecutter(test_env: TestEnvironment, hook_service: HookService):
     """Developer runs cookiecutter (generic standalone mode)."""
+    # Issue 3 & 10: Use factory function and error constant
     if not test_env.has_git_installed:
-        test_env.result = ScaffoldResult(
-            success=False,
-            exit_code=1,
-            output="",
-            error_output="ERROR: git not found. Install git first: https://git-scm.com/downloads",
-            generated_directory=None,
-        )
-    else:
-        return sam_runs_cookiecutter(test_env, hook_service, "test_kata")
+        test_env.result = create_error_result(ERROR_GIT_NOT_FOUND)
+        return test_env
+    return sam_runs_cookiecutter(test_env, hook_service, "test_kata")
 
 
 # --------------------------------------------------------------------------
@@ -401,17 +355,13 @@ def hook_detects_git(test_env: TestEnvironment, hook_service: HookService):
 @then("the hook skips GitHub repository creation")
 def hook_skips_gh_create(test_env: TestEnvironment):
     """Verify gh repo create was skipped."""
-    assert "gh repo create" in test_env.result.commands_skipped, (
-        "gh repo create should be skipped in integration mode"
-    )
+    assert "gh repo create" in test_env.result.commands_skipped, "gh repo create should be skipped in integration mode"
 
 
 @then("the hook skips git initialization")
 def hook_skips_git_init(test_env: TestEnvironment):
     """Verify git init was skipped."""
-    assert "git init" in test_env.result.commands_skipped, (
-        "git init should be skipped in integration mode"
-    )
+    assert "git init" in test_env.result.commands_skipped, "git init should be skipped in integration mode"
 
 
 @then("the hook skips adding git remote origin")
@@ -425,37 +375,25 @@ def hook_skips_remote_add(test_env: TestEnvironment):
 @then("the hook skips pushing to remote")
 def hook_skips_push(test_env: TestEnvironment):
     """Verify git push was skipped."""
-    assert "git push" in test_env.result.commands_skipped, (
-        "git push should be skipped in integration mode"
-    )
+    assert "git push" in test_env.result.commands_skipped, "git push should be skipped in integration mode"
 
 
 @then("the hook installs development dependencies")
 def hook_installs_deps(test_env: TestEnvironment):
     """Verify pipenv install was executed."""
-    assert "pipenv install --dev" in test_env.result.commands_executed, (
-        "pipenv install --dev should always execute"
-    )
+    assert "pipenv install --dev" in test_env.result.commands_executed, "pipenv install --dev should always execute"
 
 
 @then("the hook installs pre-commit hooks")
 def hook_installs_precommit(test_env: TestEnvironment):
     """Verify pre-commit install was executed."""
-    assert "pre-commit install" in test_env.result.commands_executed, (
-        "pre-commit install should always execute"
-    )
+    assert "pre-commit install" in test_env.result.commands_executed, "pre-commit install should always execute"
 
 
-@then(
-    parsers.parse(
-        'the hook creates a validation commit with message containing "{text}"'
-    )
-)
+@then(parsers.parse('the hook creates a validation commit with message containing "{text}"'))
 def hook_creates_commit(test_env: TestEnvironment, text: str):
     """Verify validation commit was created."""
-    assert "git commit" in test_env.result.commands_executed, (
-        "git commit should execute in integration mode"
-    )
+    assert "git commit" in test_env.result.commands_executed, "git commit should execute in integration mode"
 
 
 @then("Alex continues workflow without manual intervention")
@@ -504,17 +442,13 @@ def hook_no_git_found(test_env: TestEnvironment, hook_service: HookService):
 @then("the hook creates a private GitHub repository named with the kata")
 def hook_creates_gh_repo(test_env: TestEnvironment):
     """Verify GitHub repo creation."""
-    assert "gh repo create" in test_env.result.commands_executed, (
-        "gh repo create should execute in standalone mode"
-    )
+    assert "gh repo create" in test_env.result.commands_executed, "gh repo create should execute in standalone mode"
 
 
 @then("the hook initializes a new git repository")
 def hook_init_git(test_env: TestEnvironment):
     """Verify git init."""
-    assert "git init" in test_env.result.commands_executed, (
-        "git init should execute in standalone mode"
-    )
+    assert "git init" in test_env.result.commands_executed, "git init should execute in standalone mode"
 
 
 @then("the hook adds a remote origin pointing to GitHub")
@@ -528,17 +462,13 @@ def hook_adds_remote(test_env: TestEnvironment):
 @then("the hook pushes the initial commit to the main branch")
 def hook_pushes(test_env: TestEnvironment):
     """Verify git push."""
-    assert "git push" in test_env.result.commands_executed, (
-        "git push should execute in standalone mode"
-    )
+    assert "git push" in test_env.result.commands_executed, "git push should execute in standalone mode"
 
 
 @then("a dated project directory is created")
 def dated_directory_created(test_env: TestEnvironment):
     """Verify dated directory format."""
-    assert test_env.directory_name.startswith("2026"), (
-        "Directory name should start with date"
-    )
+    assert test_env.directory_name.startswith("2026"), "Directory name should start with date"
 
 
 @then("the hook detects the git worktree as a valid repository")
@@ -593,17 +523,13 @@ def scaffold_completes(test_env: TestEnvironment):
 def hook_fails_gh_auth(test_env: TestEnvironment):
     """Verify clear GitHub auth error."""
     assert not test_env.result.success, "Should fail when gh not authenticated"
-    assert (
-        "GitHub" in test_env.result.error_output or "gh" in test_env.result.error_output
-    )
+    assert "GitHub" in test_env.result.error_output or "gh" in test_env.result.error_output
 
 
 @then("the failure occurs before any files are modified")
 def failure_before_files(test_env: TestEnvironment):
     """Verify fail-fast behavior."""
-    assert test_env.result.generated_directory is None, (
-        "No files should be created on early failure"
-    )
+    assert test_env.result.generated_directory is None, "No files should be created on early failure"
 
 
 @then("the error message includes remediation steps")
@@ -622,10 +548,7 @@ def hook_fails_no_git(test_env: TestEnvironment):
 @then("the error message includes installation instructions")
 def error_has_install_instructions(test_env: TestEnvironment):
     """Verify installation instructions in error."""
-    assert (
-        "install" in test_env.result.error_output.lower()
-        or "http" in test_env.result.error_output.lower()
-    )
+    assert "install" in test_env.result.error_output.lower() or "http" in test_env.result.error_output.lower()
 
 
 @then("the hook resolves the symlink and detects the git repository")
@@ -651,14 +574,10 @@ def commit_on_branch(test_env: TestEnvironment, branch_name: str):
     assert test_env.current_branch == branch_name, (
         f"Commit should be on {branch_name}, but current branch is {test_env.current_branch}"
     )
-    assert "git commit" in test_env.result.commands_executed, (
-        "git commit should be executed"
-    )
+    assert "git commit" in test_env.result.commands_executed, "git commit should be executed"
 
 
 @then(parsers.parse('the branch remains "{branch_name}" after scaffold completion'))
 def branch_remains(test_env: TestEnvironment, branch_name: str):
     """Verify branch remains unchanged after scaffold completion."""
-    assert test_env.current_branch == branch_name, (
-        f"Branch should remain {branch_name} after scaffold completion"
-    )
+    assert test_env.current_branch == branch_name, f"Branch should remain {branch_name} after scaffold completion"

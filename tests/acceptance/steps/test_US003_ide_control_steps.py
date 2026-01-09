@@ -3,6 +3,9 @@ Step definitions for US-003: IDE Opening Control.
 
 These steps implement the acceptance tests for controlling IDE
 launching behavior after scaffold generation.
+
+Note: The shared @given("the cookiecutter template is available") step
+is defined in conftest.py for DRY compliance (Issue 1).
 """
 
 from pathlib import Path
@@ -10,23 +13,14 @@ from pathlib import Path
 from pytest_bdd import given, parsers, scenarios, then, when
 
 from tests.acceptance.conftest import TestEnvironment
-from tests.doubles.hook_service import HookService, ScaffoldResult
+from tests.doubles.hook_service import (
+    HookService,
+    ScaffoldResult,
+)
+
 
 # Load all scenarios from the feature file
 scenarios("../features/US003_ide_opening_control.feature")
-
-
-# --------------------------------------------------------------------------
-# Given Steps - Context Setup
-# --------------------------------------------------------------------------
-
-
-@given("the cookiecutter template is available")
-def cookiecutter_template_available(test_env: TestEnvironment):
-    """Background step: Verify cookiecutter template is ready for use."""
-    # This step runs for all scenarios via the Background section
-    # The template is always available when running from the project root
-    return test_env
 
 
 @given("Alex is the 5D-Wave agent running in automated mode")
@@ -181,9 +175,7 @@ def maria_wants_vscode(test_env: TestEnvironment):
 
 
 @when(parsers.parse('Alex generates a scaffold with directory name "{name}"'))
-def alex_generates_with_name(
-    test_env: TestEnvironment, hook_service: HookService, name: str
-):
+def alex_generates_with_name(test_env: TestEnvironment, hook_service: HookService, name: str):
     """Alex generates scaffold with directory name."""
     test_env.directory_name = name
     ide_option = test_env.ide_option or "none"
@@ -232,9 +224,7 @@ def no_ide_parameter(test_env: TestEnvironment):
 
 
 @when(parsers.parse('the pipeline runs cookiecutter with IDE option "{option}"'))
-def pipeline_with_ide_option(
-    test_env: TestEnvironment, hook_service: HookService, option: str
-):
+def pipeline_with_ide_option(test_env: TestEnvironment, hook_service: HookService, option: str):
     """CI/CD pipeline runs with IDE option."""
     test_env.ide_option = option
     test_env.directory_name = "ci_project"
@@ -262,9 +252,7 @@ def pipeline_with_ide_option(
 
 
 @when(parsers.parse('Sam generates a scaffold with IDE option "{option}"'))
-def sam_with_ide_option(
-    test_env: TestEnvironment, hook_service: HookService, option: str
-):
+def sam_with_ide_option(test_env: TestEnvironment, hook_service: HookService, option: str):
     """Sam generates scaffold with IDE option."""
     test_env.ide_option = option
     test_env.directory_name = "sams_kata"
@@ -280,9 +268,9 @@ def sam_with_ide_option(
         )
         return test_env
 
-    is_available, warning = hook_service.check_ide_availability(option)
+    _is_available, _warning = hook_service.check_ide_availability(option)
     commands_executed = ["pipenv install --dev", "pre-commit install", "git commit"]
-    warnings = []
+    warnings: list[str] = []
 
     if option != "none":
         if test_env.has_vscode and option == "vscode":
@@ -303,14 +291,12 @@ def sam_with_ide_option(
 
 
 @when(parsers.parse('Raj generates a scaffold with IDE option "{option}"'))
-def raj_with_ide_option(
-    test_env: TestEnvironment, hook_service: HookService, option: str
-):
+def raj_with_ide_option(test_env: TestEnvironment, hook_service: HookService, option: str):
     """Raj generates scaffold with IDE option."""
     test_env.ide_option = option
     test_env.directory_name = "rajs_project"
 
-    is_valid, error_msg = hook_service.validate_ide_option(option)
+    _is_valid, _error_msg = hook_service.validate_ide_option(option)
     commands_executed = ["pipenv install --dev", "pre-commit install", "git commit"]
     warnings: list[str] = []
 
@@ -330,17 +316,13 @@ def raj_with_ide_option(
 
 
 @when(parsers.parse('Kim generates a scaffold with IDE option "{option}"'))
-def kim_with_ide_option(
-    test_env: TestEnvironment, hook_service: HookService, option: str
-):
+def kim_with_ide_option(test_env: TestEnvironment, hook_service: HookService, option: str):
     """Kim generates scaffold with IDE option on macOS."""
     return raj_with_ide_option(test_env, hook_service, option)
 
 
 @when(parsers.parse('the developer generates a scaffold with IDE option "{option}"'))
-def developer_with_ide_option(
-    test_env: TestEnvironment, hook_service: HookService, option: str
-):
+def developer_with_ide_option(test_env: TestEnvironment, hook_service: HookService, option: str):
     """Developer generates scaffold with IDE option."""
     test_env.ide_option = option
     test_env.directory_name = test_env.directory_name or "test_project"
@@ -363,11 +345,10 @@ def developer_with_ide_option(
         warnings.append("VS Code 'code' command not found, skipping IDE open")
     elif option == "pycharm" and not test_env.has_pycharm:
         warnings.append("PyCharm command not found, skipping IDE open")
-    elif option != "none":
-        if (option == "vscode" and test_env.has_vscode) or (
-            option == "pycharm" and test_env.has_pycharm
-        ):
-            commands_executed.append(f"open_ide:{option}")
+    elif option != "none" and (
+        (option == "vscode" and test_env.has_vscode) or (option == "pycharm" and test_env.has_pycharm)
+    ):
+        commands_executed.append(f"open_ide:{option}")
 
     test_env.result = ScaffoldResult(
         success=True,
@@ -382,14 +363,12 @@ def developer_with_ide_option(
 
 
 @when(parsers.parse('the developer runs cookiecutter with IDE option "{option}"'))
-def developer_runs_with_ide(
-    test_env: TestEnvironment, hook_service: HookService, option: str
-):
+def developer_runs_with_ide(test_env: TestEnvironment, hook_service: HookService, option: str):
     """Developer runs cookiecutter with IDE option (may fail on validation)."""
     test_env.ide_option = option
     test_env.directory_name = "test_project"
 
-    is_valid, error_msg = hook_service.validate_ide_option(option)
+    is_valid, _error_msg = hook_service.validate_ide_option(option)
     if not is_valid:
         # Build helpful error message
         error = f"ERROR: Invalid open_ide value: '{option}'\n"
@@ -409,14 +388,8 @@ def developer_runs_with_ide(
     return developer_with_ide_option(test_env, hook_service, option)
 
 
-@when(
-    parsers.parse(
-        'Alex generates a scaffold with directory name "{name}" and IDE option "{option}"'
-    )
-)
-def alex_with_name_and_ide(
-    test_env: TestEnvironment, hook_service: HookService, name: str, option: str
-):
+@when(parsers.parse('Alex generates a scaffold with directory name "{name}" and IDE option "{option}"'))
+def alex_with_name_and_ide(test_env: TestEnvironment, hook_service: HookService, name: str, option: str):
     """Alex generates with both directory name and IDE option."""
     test_env.directory_name = name
     test_env.ide_option = option
@@ -424,9 +397,7 @@ def alex_with_name_and_ide(
 
 
 @when(parsers.parse('Maria generates the scaffold with IDE option "{option}"'))
-def maria_with_ide_option(
-    test_env: TestEnvironment, hook_service: HookService, option: str
-):
+def maria_with_ide_option(test_env: TestEnvironment, hook_service: HookService, option: str):
     """Maria generates scaffold with IDE option."""
     test_env.ide_option = option
     return developer_with_ide_option(test_env, hook_service, option)
@@ -440,9 +411,7 @@ def maria_with_ide_option(
 @then("no IDE application launches")
 def no_ide_launches(test_env: TestEnvironment):
     """Verify no IDE launched."""
-    ide_commands = [
-        cmd for cmd in test_env.result.commands_executed if cmd.startswith("open_ide:")
-    ]
+    ide_commands = [cmd for cmd in test_env.result.commands_executed if cmd.startswith("open_ide:")]
     assert len(ide_commands) == 0, "No IDE should launch with open_ide=none"
 
 
@@ -463,9 +432,7 @@ def alex_continues_uninterrupted(test_env: TestEnvironment):
 @then("no IDE launch is attempted")
 def no_ide_attempt(test_env: TestEnvironment):
     """Verify no IDE launch attempt."""
-    ide_commands = [
-        cmd for cmd in test_env.result.commands_executed if "ide" in cmd.lower()
-    ]
+    ide_commands = [cmd for cmd in test_env.result.commands_executed if "ide" in cmd.lower()]
     assert len(ide_commands) == 0 or all("none" in cmd for cmd in ide_commands)
 
 
@@ -479,9 +446,7 @@ def process_completes_cleanly(test_env: TestEnvironment):
 @then("VS Code opens with the generated project directory")
 def vscode_opens(test_env: TestEnvironment):
     """Verify VS Code opens."""
-    assert "open_ide:vscode" in test_env.result.commands_executed, (
-        "VS Code should open when requested and available"
-    )
+    assert "open_ide:vscode" in test_env.result.commands_executed, "VS Code should open when requested and available"
 
 
 @then("Sam can start coding immediately in their preferred editor")
@@ -493,9 +458,7 @@ def sam_coding_ready(test_env: TestEnvironment):
 @then("PyCharm opens with the generated project directory")
 def pycharm_opens(test_env: TestEnvironment):
     """Verify PyCharm opens."""
-    assert "open_ide:pycharm" in test_env.result.commands_executed, (
-        "PyCharm should open when requested and available"
-    )
+    assert "open_ide:pycharm" in test_env.result.commands_executed, "PyCharm should open when requested and available"
 
 
 @then("the appropriate platform command is used for the operating system")
@@ -509,10 +472,7 @@ def platform_appropriate_command(test_env: TestEnvironment):
 def macos_open_command(test_env: TestEnvironment):
     """Verify macOS open command used."""
     # Implementation detail - macOS uses 'open -a PyCharm'
-    assert (
-        "open_ide:pycharm" in test_env.result.commands_executed
-        or test_env.result.success
-    )
+    assert "open_ide:pycharm" in test_env.result.commands_executed or test_env.result.success
 
 
 @then("PyCharm application launches with the project")
@@ -524,9 +484,7 @@ def pycharm_launches(test_env: TestEnvironment):
 @then("the hook prints a warning about VS Code not being found")
 def vscode_warning(test_env: TestEnvironment):
     """Verify VS Code not found warning."""
-    assert any("VS Code" in w or "code" in w for w in test_env.result.warnings), (
-        "Should warn about VS Code not found"
-    )
+    assert any("VS Code" in w or "code" in w for w in test_env.result.warnings), "Should warn about VS Code not found"
 
 
 @then("the scaffold generation completes successfully")
@@ -551,9 +509,9 @@ def other_operations_completed(test_env: TestEnvironment):
 @then("the hook prints a warning about PyCharm not being found")
 def pycharm_warning(test_env: TestEnvironment):
     """Verify PyCharm not found warning."""
-    assert any(
-        "PyCharm" in w or "pycharm" in w.lower() for w in test_env.result.warnings
-    ), "Should warn about PyCharm not found"
+    assert any("PyCharm" in w or "pycharm" in w.lower() for w in test_env.result.warnings), (
+        "Should warn about PyCharm not found"
+    )
 
 
 @then("the developer can open the project manually")
@@ -612,10 +570,7 @@ def no_files_created(test_env: TestEnvironment):
 def hook_fails_invalid_ide(test_env: TestEnvironment):
     """Verify error about invalid IDE."""
     assert not test_env.result.success
-    assert (
-        "invalid" in test_env.result.error_output.lower()
-        or "Invalid" in test_env.result.error_output
-    )
+    assert "invalid" in test_env.result.error_output.lower() or "Invalid" in test_env.result.error_output
 
 
 @then(parsers.parse('the error suggests "{suggestion}" as a possible correction'))
@@ -648,9 +603,7 @@ def generation_completes(test_env: TestEnvironment):
 @then("no IDE opens")
 def no_ide_opens(test_env: TestEnvironment):
     """Verify no IDE opens."""
-    ide_commands = [
-        cmd for cmd in test_env.result.commands_executed if cmd.startswith("open_ide:")
-    ]
+    ide_commands = [cmd for cmd in test_env.result.commands_executed if cmd.startswith("open_ide:")]
     assert len(ide_commands) == 0
 
 

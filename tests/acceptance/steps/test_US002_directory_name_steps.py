@@ -3,97 +3,30 @@ Step definitions for US-002: Configurable Source Directory Name.
 
 These steps implement the acceptance tests for custom directory naming
 and the integration signal behavior.
+
+Note: The shared @given("the cookiecutter template is available") step
+is defined in conftest.py for DRY compliance (Issue 1).
+Validation utilities are now in hook_service.py (Issue 7).
 """
 
 from pathlib import Path
-from typing import Optional, Tuple
 
 from pytest_bdd import given, parsers, scenarios, then, when
 
-from tests.acceptance.conftest import TestEnvironment
-from tests.doubles.hook_service import HookService, ScaffoldResult
+from tests.acceptance.conftest import TestEnvironment, init_git_repo
+from tests.doubles.hook_service import (
+    ERROR_INVALID_CHARACTERS,
+    HookService,
+    contains_path_separators,
+    create_error_result,
+    create_prompt_fallback_result,
+    create_success_result,
+    validate_directory_name,
+)
+
 
 # Load all scenarios from the feature file
 scenarios("../features/US002_directory_name_configuration.feature")
-
-
-# --------------------------------------------------------------------------
-# Validation Utilities - Extracted for DRY principle (Level 2 refactoring)
-# --------------------------------------------------------------------------
-
-
-def contains_path_separators(name: str) -> bool:
-    """Check if directory name contains path separator characters."""
-    return "/" in name or "\\" in name
-
-
-def validate_directory_name(
-    name: str, work_dir: Path
-) -> Tuple[bool, Optional[ScaffoldResult]]:
-    """
-    Validate directory name and return error result if invalid.
-
-    Returns:
-        Tuple of (is_valid, error_result). If is_valid is True, error_result is None.
-    """
-    # Check for existing directory
-    target_dir = work_dir / name
-    if target_dir.exists():
-        return False, ScaffoldResult(
-            success=False,
-            exit_code=1,
-            output="",
-            error_output=f"ERROR: Directory '{name}' already exists. Remove or rename it first.",
-            generated_directory=None,
-        )
-
-    # Check for path separators (invalid characters)
-    if contains_path_separators(name):
-        return False, ScaffoldResult(
-            success=False,
-            exit_code=1,
-            output="",
-            error_output=f"ERROR: Invalid directory name '{name}'. Path separators not allowed.",
-            generated_directory=None,
-        )
-
-    return True, None
-
-
-def create_invalid_characters_error(name: str) -> ScaffoldResult:
-    """Create error result for invalid directory name characters."""
-    return ScaffoldResult(
-        success=False,
-        exit_code=1,
-        output="",
-        error_output=f"ERROR: Invalid directory name '{name}'. Characters not allowed: / \\",
-        generated_directory=None,
-    )
-
-
-def create_prompt_fallback_result() -> ScaffoldResult:
-    """Create result indicating fallback to kata name prompt."""
-    return ScaffoldResult(
-        success=True,
-        exit_code=0,
-        output="",
-        error_output="",
-        generated_directory=None,
-        commands_executed=["prompt_kata_name"],
-    )
-
-
-# --------------------------------------------------------------------------
-# Given Steps - Context Setup
-# --------------------------------------------------------------------------
-
-
-@given("the cookiecutter template is available")
-def template_available(template_dir: Path):
-    """Verify the cookiecutter template exists (Background step)."""
-    assert template_dir.exists(), f"Template directory not found: {template_dir}"
-    assert (template_dir / "cookiecutter.json").exists(), "cookiecutter.json not found"
-    assert (template_dir / "hooks").exists(), "hooks directory not found"
 
 
 @given("Maria is in a platform services directory")
@@ -118,26 +51,9 @@ def alex_project_root(test_env: TestEnvironment, work_dir: Path):
 @given("the project already has a git repository")
 def project_has_git(test_env: TestEnvironment, git_repo: Path):
     """Mark that project has existing git repo."""
-    # Move git repo to project directory
-    import subprocess
-
-    subprocess.run(
-        ["git", "init"], cwd=test_env.work_dir, capture_output=True, check=True
-    )
-    subprocess.run(
-        ["git", "config", "user.email", "test@example.com"],
-        cwd=test_env.work_dir,
-        capture_output=True,
-        check=True,
-    )
-    subprocess.run(
-        ["git", "config", "user.name", "Test User"],
-        cwd=test_env.work_dir,
-        capture_output=True,
-        check=True,
-    )
+    # Issue 2: Use shared helper instead of inline subprocess calls
+    init_git_repo(test_env.work_dir)
     test_env.has_git = True
-    return test_env
 
 
 @given("Sam is starting a fresh coding kata")
@@ -151,9 +67,7 @@ def sam_fresh_kata(test_env: TestEnvironment, work_dir: Path):
 
 
 @given(parsers.parse('a developer provides directory name "{name}"'))
-def developer_provides_directory_name(
-    test_env: TestEnvironment, work_dir: Path, name: str
-):
+def developer_provides_directory_name(test_env: TestEnvironment, work_dir: Path, name: str):
     """Set up developer with explicit directory name."""
     test_env.work_dir = work_dir
     test_env.directory_name = name
@@ -221,13 +135,11 @@ def developer_empty_directory_name(test_env: TestEnvironment, work_dir: Path):
 
 
 @when(parsers.parse('Maria runs the cookiecutter with directory name "{name}"'))
-def maria_runs_with_directory_name(
-    test_env: TestEnvironment, hook_service: HookService, name: str
-):
+def maria_runs_with_directory_name(test_env: TestEnvironment, hook_service: HookService, name: str):
     """Maria runs cookiecutter with explicit directory name."""
     test_env.directory_name = name
 
-    # Validate directory name using extracted utility
+    # Validate directory name using extracted utility (Issue 7)
     is_valid, error_result = validate_directory_name(name, test_env.work_dir)
     if not is_valid:
         test_env.result = error_result
@@ -239,33 +151,23 @@ def maria_runs_with_directory_name(
         start_path=test_env.work_dir,
     )
 
-    # Explicit directory name signals integration mode
-    test_env.result = ScaffoldResult(
-        success=True,
-        exit_code=0,
-        output="",
-        error_output="",
+    # Issue 3: Use factory function instead of inline construction
+    test_env.result = create_success_result(
         generated_directory=test_env.work_dir / name,
-        commands_skipped=["gh repo create", "git remote add origin", "git push"]
-        if is_integration
-        else [],
         commands_executed=["pipenv install --dev", "pre-commit install", "git commit"],
+        commands_skipped=["gh repo create", "git remote add origin", "git push"] if is_integration else [],
     )
     return test_env
 
 
 @when(parsers.parse('Alex runs the cookiecutter with directory name "{name}"'))
-def alex_runs_with_directory_name(
-    test_env: TestEnvironment, hook_service: HookService, name: str
-):
+def alex_runs_with_directory_name(test_env: TestEnvironment, hook_service: HookService, name: str):
     """Alex runs cookiecutter with specified directory name."""
     return maria_runs_with_directory_name(test_env, hook_service, name)
 
 
 @when("Sam runs the cookiecutter without specifying directory name")
-def sam_runs_without_directory_name(
-    test_env: TestEnvironment, hook_service: HookService
-):
+def sam_runs_without_directory_name(test_env: TestEnvironment, hook_service: HookService):
     """Sam runs cookiecutter in default mode."""
     test_env.directory_name = None  # Will be prompted
     test_env.kata_name = None  # Will be prompted
@@ -282,46 +184,18 @@ def developer_generates_scaffold(test_env: TestEnvironment, hook_service: HookSe
         test_env.result = create_prompt_fallback_result()
         return test_env
 
-    is_integration = hook_service.is_integration_mode(
-        directory_name=name,
-        kata_name="DummyKata",
-        start_path=test_env.work_dir,
+    # Build command list based on mode (integration mode skips remote operations)
+    commands: list[str] = []
+    if not test_env.has_git:
+        commands.append("git init")  # Create local git if not in existing repo
+    commands.extend(["pipenv install --dev", "pre-commit install", "git commit"])
+
+    # Issue 3: Use factory function instead of inline construction
+    test_env.result = create_success_result(
+        generated_directory=test_env.work_dir / name,
+        commands_executed=commands,
+        commands_skipped=["gh repo create", "git remote add origin", "git push"],
     )
-
-    if is_integration:
-        # Integration mode skips GitHub/remote but still creates local git if not in repo
-        commands = []
-        if not test_env.has_git:
-            commands.append(
-                "git init"
-            )  # Still create local git even in integration mode
-        commands.extend(["pipenv install --dev", "pre-commit install", "git commit"])
-
-        test_env.result = ScaffoldResult(
-            success=True,
-            exit_code=0,
-            output="",
-            error_output="",
-            generated_directory=test_env.work_dir / name,
-            commands_skipped=["gh repo create", "git remote add origin", "git push"],
-            commands_executed=commands,
-        )
-    else:
-        # Still creates local git repo even in non-git-detected mode with explicit name
-        test_env.result = ScaffoldResult(
-            success=True,
-            exit_code=0,
-            output="",
-            error_output="",
-            generated_directory=test_env.work_dir / name,
-            commands_skipped=["gh repo create", "git remote add origin", "git push"],
-            commands_executed=[
-                "git init",
-                "pipenv install --dev",
-                "pre-commit install",
-                "git commit",
-            ],
-        )
     return test_env
 
 
@@ -356,9 +230,9 @@ def developer_attempts_scaffold(test_env: TestEnvironment, hook_service: HookSer
     """Developer attempts scaffold (may fail)."""
     name = test_env.directory_name
 
-    # Validate directory name using extracted utilities
+    # Validate directory name using extracted utilities (Issue 7)
     if name and contains_path_separators(name):
-        test_env.result = create_invalid_characters_error(name)
+        test_env.result = create_error_result(ERROR_INVALID_CHARACTERS.format(name=name))
         return test_env
 
     if not name or name.strip() == "":
@@ -537,10 +411,7 @@ def scaffold_no_errors(test_env: TestEnvironment):
 def hook_fails_invalid_name(test_env: TestEnvironment):
     """Verify clear error for invalid name."""
     assert not test_env.result.success
-    assert (
-        "Invalid" in test_env.result.error_output
-        or "invalid" in test_env.result.error_output
-    )
+    assert "Invalid" in test_env.result.error_output or "invalid" in test_env.result.error_output
 
 
 @then("the error explains which characters are not allowed")

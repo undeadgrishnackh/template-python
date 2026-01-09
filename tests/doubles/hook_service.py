@@ -13,7 +13,6 @@ import os
 import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
 
 
 @dataclass
@@ -24,10 +23,131 @@ class ScaffoldResult:
     exit_code: int
     output: str
     error_output: str
-    generated_directory: Optional[Path]
-    commands_executed: list = field(default_factory=list)
-    commands_skipped: list = field(default_factory=list)
-    warnings: list = field(default_factory=list)
+    generated_directory: Path | None
+    # Issue 4: Added type hints to list fields
+    commands_executed: list[str] = field(default_factory=list)
+    commands_skipped: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+
+
+# --------------------------------------------------------------------------
+# Issue 10: Error Message Constants
+# --------------------------------------------------------------------------
+
+ERROR_DIRECTORY_EXISTS = "ERROR: Directory '{name}' already exists. Remove or rename it first."
+ERROR_INVALID_DIRECTORY_NAME = "ERROR: Invalid directory name '{name}'. Path separators not allowed."
+ERROR_INVALID_CHARACTERS = "ERROR: Invalid directory name '{name}'. Characters not allowed: / \\"
+ERROR_GH_NOT_AUTHENTICATED = "ERROR: GitHub CLI not authenticated. Run 'gh auth login' first."
+ERROR_GIT_NOT_FOUND = "ERROR: git not found. Install git first: https://git-scm.com/downloads"
+
+
+# --------------------------------------------------------------------------
+# Issue 11: Configuration Constants
+# --------------------------------------------------------------------------
+
+GITHUB_USERNAME = "undeadgrishnackh"
+
+
+# --------------------------------------------------------------------------
+# Issue 3 & 7: ScaffoldResult Factories and Validation Utilities
+# --------------------------------------------------------------------------
+
+
+def create_error_result(error_message: str) -> ScaffoldResult:
+    """Create a failed ScaffoldResult with the given error message.
+
+    Args:
+        error_message: The error message to include.
+
+    Returns:
+        A ScaffoldResult indicating failure.
+    """
+    return ScaffoldResult(
+        success=False,
+        exit_code=1,
+        output="",
+        error_output=error_message,
+        generated_directory=None,
+    )
+
+
+def create_success_result(
+    generated_directory: Path,
+    commands_executed: list[str] | None = None,
+    commands_skipped: list[str] | None = None,
+    warnings: list[str] | None = None,
+) -> ScaffoldResult:
+    """Create a successful ScaffoldResult.
+
+    Args:
+        generated_directory: Path to the generated directory.
+        commands_executed: List of commands that were executed.
+        commands_skipped: List of commands that were skipped.
+        warnings: List of warning messages.
+
+    Returns:
+        A ScaffoldResult indicating success.
+    """
+    return ScaffoldResult(
+        success=True,
+        exit_code=0,
+        output="",
+        error_output="",
+        generated_directory=generated_directory,
+        commands_executed=commands_executed or [],
+        commands_skipped=commands_skipped or [],
+        warnings=warnings or [],
+    )
+
+
+def create_prompt_fallback_result() -> ScaffoldResult:
+    """Create result indicating fallback to kata name prompt.
+
+    Returns:
+        A ScaffoldResult indicating prompt fallback was triggered.
+    """
+    return ScaffoldResult(
+        success=True,
+        exit_code=0,
+        output="",
+        error_output="",
+        generated_directory=None,
+        commands_executed=["prompt_kata_name"],
+    )
+
+
+def contains_path_separators(name: str) -> bool:
+    """Check if directory name contains path separator characters.
+
+    Args:
+        name: Directory name to check.
+
+    Returns:
+        True if name contains path separators.
+    """
+    return "/" in name or "\\" in name
+
+
+def validate_directory_name(name: str, work_dir: Path) -> tuple[bool, ScaffoldResult | None]:
+    """Validate directory name and return error result if invalid.
+
+    Args:
+        name: Directory name to validate.
+        work_dir: Working directory to check for existing directories.
+
+    Returns:
+        Tuple of (is_valid, error_result). If is_valid is True, error_result is None.
+    """
+    # Check for existing directory
+    target_dir = work_dir / name
+    if target_dir.exists():
+        return False, create_error_result(ERROR_DIRECTORY_EXISTS.format(name=name))
+
+    # Check for path separators (invalid characters)
+    if contains_path_separators(name):
+        return False, create_error_result(ERROR_INVALID_DIRECTORY_NAME.format(name=name))
+
+    return True, None
 
 
 class HookService:
@@ -66,9 +186,7 @@ class HookService:
             current = current.parent
         return (current / ".git").exists()
 
-    def is_integration_mode(
-        self, directory_name: str, kata_name: str, start_path: Path
-    ) -> bool:
+    def is_integration_mode(self, directory_name: str, kata_name: str, start_path: Path) -> bool:
         """Determine if running in integration mode.
 
         Implements ADR-002: Directory Name as Integration Signal.
@@ -85,9 +203,7 @@ class HookService:
         Returns:
             True if in integration mode, False for standalone mode.
         """
-        is_default_format = directory_name.endswith(
-            f"_{kata_name.lower().replace(' ', '_')}"
-        )
+        is_default_format = directory_name.endswith(f"_{kata_name.lower().replace(' ', '_')}")
         return not is_default_format or self.is_inside_git_repo(start_path)
 
     def validate_ide_option(self, ide_option: str) -> tuple[bool, str]:

@@ -1,10 +1,13 @@
 #!/usr/bin/env python
 import os
-from pathlib import Path
 import subprocess
+from pathlib import Path
 
 
 PROJECT_DIRECTORY = os.path.realpath(os.path.curdir)
+
+# Issue 11: Configuration constant for GitHub username
+GITHUB_USERNAME = "undeadgrishnackh"
 
 
 def is_inside_git_repo() -> bool:
@@ -37,13 +40,9 @@ kata_name = "{{ cookiecutter.directory_name }}"
 
 
 def run_command(command):
-    completed_process = subprocess.run(
-        command, cwd=PROJECT_DIRECTORY, shell=True, check=True, timeout=360
-    )
+    completed_process = subprocess.run(command, cwd=PROJECT_DIRECTORY, shell=True, check=True, timeout=360)
     if completed_process.returncode != 0:
-        raise Exception(
-            f"Command {command} failed with return code {completed_process.returncode}"
-        )
+        raise Exception(f"Command {command} failed with return code {completed_process.returncode}")
 
 
 def setup_environment():
@@ -95,9 +94,7 @@ def initialize_git_repository(kata_name: str) -> None:
     run_command("git init")
 
     print("  Adding remote origin...")
-    run_command(
-        f"git remote add origin git@github.com:undeadgrishnackh/{kata_name}.git"
-    )
+    run_command(f"git remote add origin git@github.com:{GITHUB_USERNAME}/{kata_name}.git")
 
     print("  Setting main branch...")
     run_command("git branch -M main")
